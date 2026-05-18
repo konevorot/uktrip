@@ -2,130 +2,205 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#1a1a1a"/>
+<title>🇬🇧 UK Trip · 26.06 — 10.07</title>
+<meta property="og:title" content="🇬🇧 Англия и Шотландия · Карта путешествия"/>
+<meta property="og:description" content="200+ мест в Лондоне, Эдинбурге и Глазго"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-:root{--border:#e8e8e5;--muted:#888;--bg:#f7f6f3;--accent:#1a1a1a;--fav:#e74c3c;--visited:#27ae60;--planned:#3498db;--cal:#8854d0;--sidebar:320px}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
-header{background:#fff;border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;gap:10px;height:48px;flex-shrink:0;z-index:1000}
+:root{--border:#e8e8e5;--muted:#888;--bg:#f7f6f3;--accent:#1a1a1a;--fav:#e74c3c;--visited:#27ae60;--planned:#3498db;--cal:#8854d0;--sidebar:320px;--safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom);--safe-l:env(safe-area-inset-left);--safe-r:env(safe-area-inset-right);--tab-h:0px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── HEADER ── */
+header{background:#fff;border-bottom:1px solid var(--border);padding:0 14px;padding-top:var(--safe-t);display:flex;align-items:center;gap:10px;min-height:48px;flex-shrink:0;z-index:1000}
 header h1{font-size:13px;font-weight:600;white-space:nowrap}
 .header-right{display:flex;gap:4px;margin-left:auto;align-items:center}
 .city-tabs{display:flex;gap:3px}
-.city-tab{padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s}
+.city-tab{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s;white-space:nowrap}
 .city-tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-.hdr-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:3px;margin-left:6px}
+.hdr-btn{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:3px;margin-left:6px;white-space:nowrap}
 .hdr-btn:hover{background:#f5f5f5}
 .hdr-btn.on{background:var(--cal);color:#fff;border-color:var(--cal)}
+
+/* ── LAYOUT ── */
 .body{display:flex;flex:1;overflow:hidden;position:relative}
 aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;background:#fff;border-right:1px solid var(--border);overflow:hidden}
 .search-bar{padding:6px 10px;border-bottom:1px solid var(--border);display:flex;gap:4px;align-items:center}
-.search-bar input{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fafaf8;outline:none}
+.search-bar input{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit;background:#fafaf8;outline:none}
 .search-bar input:focus{border-color:#bbb;background:#fff}
-.search-bar select{padding:4px;border:1px solid var(--border);border-radius:8px;font-size:10px;font-family:inherit;background:#fff;cursor:pointer}
+.search-bar select{padding:5px 4px;border:1px solid var(--border);border-radius:8px;font-size:11px;font-family:inherit;background:#fff;cursor:pointer}
 .cats{padding:6px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:3px}
-.cat-chip{padding:2px 7px;border-radius:12px;border:1px solid;font-size:10px;cursor:pointer;background:#fff;transition:.15s}
+.cat-chip{padding:3px 8px;border-radius:12px;border:1px solid;font-size:10px;cursor:pointer;background:#fff;transition:.15s}
 .cat-chip.off{opacity:.2}
 .filters-bar{padding:5px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:3px;align-items:center;background:#fafaf8}
-.filter-btn{padding:2px 8px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;transition:.15s}
+.filter-btn{padding:4px 10px;border-radius:14px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s}
 .filter-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .date-filter{display:flex;align-items:center;gap:3px;margin-left:auto}
 .date-filter label{font-size:9px;color:var(--muted)}
-.date-filter input[type=date]{font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:6px;background:#fff;font-family:inherit}
-.count-bar{padding:5px 10px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafaf8;display:flex;justify-content:space-between;align-items:center}
-.add-place-btn{background:var(--accent);color:#fff;border:none;padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;font-family:inherit}
-.places-list{overflow-y:auto;flex:1}
-.place-card{padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s;position:relative}
+.date-filter input[type=date]{font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:6px;background:#fff;font-family:inherit}
+.count-bar{padding:5px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafaf8;display:flex;justify-content:space-between;align-items:center}
+.add-place-btn{background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;font-family:inherit}
+.places-list{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.place-card{padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s;position:relative}
 .place-card:hover{background:#f9f9f7}
 .place-card.active{background:#f0f0ec;border-left:3px solid #333}
-.place-card .pname{font-size:12px;font-weight:500;margin-bottom:2px;padding-right:50px}
-.place-card .pdesc{font-size:10px;color:var(--muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.place-card .pnote{font-size:10px;color:var(--cal);font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.place-card .ptag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:8px;border:1px solid;margin-bottom:2px;font-weight:500}
-.place-card .pcity{font-size:9px;color:#aaa;margin-left:3px}
-.links{margin-top:3px;display:flex;gap:5px}
-.links a{font-size:9px;color:#0066cc;text-decoration:none}
-.card-actions{position:absolute;top:6px;right:6px;display:flex;gap:1px}
-.card-action{width:20px;height:20px;border:none;border-radius:50%;background:transparent;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:.3;transition:.15s}
+.place-card .pname{font-size:13px;font-weight:500;margin-bottom:2px;padding-right:50px}
+.place-card .pdesc{font-size:11px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.place-card .pnote{font-size:11px;color:var(--cal);font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.place-card .ptag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:8px;border:1px solid;margin-bottom:2px;font-weight:500}
+.place-card .pcity{font-size:10px;color:#aaa;margin-left:3px}
+.links{margin-top:4px;display:flex;gap:8px}
+.links a{font-size:11px;color:#0066cc;text-decoration:none}
+.card-actions{position:absolute;top:8px;right:8px;display:flex;gap:2px}
+.card-action{width:28px;height:28px;border:none;border-radius:50%;background:transparent;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;opacity:.3;transition:.15s}
 .card-action:hover{opacity:1;background:rgba(0,0,0,.05)}
 .card-action.fav-on{opacity:1;color:var(--fav)}
 .card-action.vis-on{opacity:1;color:var(--visited)}
 .card-badges{display:flex;gap:3px;align-items:center;margin-bottom:2px;flex-wrap:wrap}
-.badge{font-size:8px;padding:1px 4px;border-radius:5px;font-weight:500}
+.badge{font-size:9px;padding:1px 5px;border-radius:5px;font-weight:500}
 .badge-fav{background:#fde8e8;color:var(--fav)}
 .badge-vis{background:#e8f8ef;color:var(--visited)}
 .badge-date{background:#e8f0fd;color:var(--planned)}
 .badge-custom{background:#f3e8fd;color:#8e44ad}
 .badge-note{background:#fff3e0;color:#e67e22}
+
+/* ── MAP ── */
 #map{flex:1}
-.leaflet-popup-content-wrapper{border-radius:10px;padding:0;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.leaflet-popup-content-wrapper{border-radius:12px;padding:0;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .leaflet-popup-content{margin:0;width:270px!important}
-.popup-inner{padding:10px 12px}
-.popup-tag{font-size:10px;font-weight:600;margin-bottom:2px}
-.popup-name{font-size:13px;font-weight:600;margin-bottom:3px}
-.popup-desc{font-size:11px;color:#555;line-height:1.4;margin-bottom:5px}
-.popup-note-show{font-size:10px;color:var(--cal);font-style:italic;margin-bottom:5px;padding:4px 6px;background:#f8f4ff;border-radius:6px}
-.popup-links{display:flex;gap:8px;padding-top:4px;border-top:1px solid #eee}
-.popup-links a{font-size:10px;color:#0066cc;text-decoration:none}
-.popup-actions{display:flex;gap:4px;padding-top:5px;border-top:1px solid #eee;margin-top:5px;flex-wrap:wrap;align-items:center}
-.popup-action-btn{padding:2px 7px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;font-family:inherit}
+.popup-inner{padding:12px 14px}
+.popup-tag{font-size:11px;font-weight:600;margin-bottom:2px}
+.popup-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.popup-desc{font-size:12px;color:#555;line-height:1.4;margin-bottom:6px}
+.popup-note-show{font-size:11px;color:var(--cal);font-style:italic;margin-bottom:6px;padding:5px 8px;background:#f8f4ff;border-radius:6px}
+.popup-links{display:flex;gap:10px;padding-top:5px;border-top:1px solid #eee}
+.popup-links a{font-size:11px;color:#0066cc;text-decoration:none}
+.popup-actions{display:flex;gap:5px;padding-top:6px;border-top:1px solid #eee;margin-top:6px;flex-wrap:wrap;align-items:center}
+.popup-action-btn{padding:5px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;min-height:32px}
 .popup-action-btn.on-fav{background:#fde8e8;border-color:#e7a1a1;color:var(--fav)}
 .popup-action-btn.on-vis{background:#e8f8ef;border-color:#a1d4b7;color:var(--visited)}
-.popup-date-input{font-size:10px;padding:2px 4px;border:1px solid var(--border);border-radius:8px;font-family:inherit;width:110px}
-.popup-note-input{font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:8px;font-family:inherit;width:100%;margin-top:4px;resize:none;height:34px}
-/* Calendar */
-.cal-panel{display:none;position:absolute;top:0;right:0;width:370px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,.08);z-index:999;overflow-y:auto;flex-direction:column}
+.popup-date-input{font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:10px;font-family:inherit;width:120px;min-height:32px}
+.popup-note-input{font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:10px;font-family:inherit;width:100%;margin-top:5px;resize:none;height:38px}
+
+/* ── CALENDAR ── */
+.cal-panel{display:none;position:absolute;top:0;right:0;width:370px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,.08);z-index:999;overflow-y:auto;flex-direction:column;-webkit-overflow-scrolling:touch}
 .cal-panel.show{display:flex}
 .cal-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
 .cal-header h3{font-size:14px;font-weight:600}
 .cal-export-btns{display:flex;gap:4px}
-.cal-export-btn{padding:3px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;font-family:inherit}
-.cal-export-btn:hover{background:#f5f5f5}
+.cal-export-btn{padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;min-height:32px}
 .cal-day{border-bottom:1px solid var(--border)}
-.cal-day-header{padding:7px 14px;background:#fafaf8;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
-.cal-day-header:hover{background:#f0f0ec}
-.cal-day-count{font-size:10px;font-weight:400;color:var(--muted);background:var(--border);padding:1px 6px;border-radius:8px}
+.cal-day-header{padding:10px 14px;background:#fafaf8;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;min-height:44px}
+.cal-day-count{font-size:11px;font-weight:400;color:var(--muted);background:var(--border);padding:2px 8px;border-radius:8px}
 .cal-day-count.warn{background:#fde8e8;color:var(--fav)}
 .cal-day-body.collapsed{display:none}
-.cal-place{padding:5px 14px;display:flex;align-items:center;gap:8px;font-size:11px;border-top:1px solid #f0f0ec;cursor:pointer}
-.cal-place:hover{background:#f9f9f7}
+.cal-place{padding:8px 14px;display:flex;align-items:center;gap:8px;font-size:12px;border-top:1px solid #f0f0ec;cursor:pointer;min-height:44px}
 .cal-place .cal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .cal-place .cal-pname{flex:1;font-weight:500}
-.cal-place .cal-remove{opacity:0;font-size:14px;cursor:pointer;color:var(--muted)}
-.cal-place:hover .cal-remove{opacity:1}
-.cal-empty{padding:8px 14px;font-size:11px;color:#ccc;font-style:italic}
-.cal-route-btn{padding:2px 8px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;font-family:inherit}
-.cal-route-btn:hover{background:var(--planned);color:#fff;border-color:var(--planned)}
+.cal-place .cal-remove{font-size:16px;cursor:pointer;color:var(--muted);padding:4px 8px}
+.cal-empty{padding:10px 14px;font-size:12px;color:#ccc;font-style:italic}
+.cal-route-btn{padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;min-height:32px}
 .cal-route-btn.on{background:var(--planned);color:#fff;border-color:var(--planned)}
 .cal-unassigned{background:#fff3e0}
-/* Modal */
+
+/* ── MODAL ── */
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:2000;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:#fff;border-radius:14px;width:420px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2)}
+.modal{background:#fff;border-radius:14px;width:420px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2);-webkit-overflow-scrolling:touch}
 .modal-header{padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between}
-.modal-header h2{font-size:15px;font-weight:600}
-.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:4px 8px;border-radius:8px}
-.modal-close:hover{background:#f0f0f0}
+.modal-header h2{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:8px;border-radius:8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
 .modal-body{padding:14px 18px}
-.form-group{margin-bottom:10px}
-.form-group label{display:block;font-size:10px;font-weight:600;color:#555;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
-.form-group input,.form-group textarea,.form-group select{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:#fff}
 .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:#999}
-.form-group textarea{resize:vertical;min-height:50px}
+.form-group textarea{resize:vertical;min-height:60px}
 .form-row{display:flex;gap:8px}
 .form-row .form-group{flex:1}
-.modal-footer{padding:10px 18px 14px;display:flex;gap:6px;justify-content:flex-end}
-.modal-btn{padding:6px 16px;border-radius:10px;border:none;font-size:12px;font-family:inherit;cursor:pointer;font-weight:500}
+.modal-footer{padding:12px 18px 16px;display:flex;gap:8px;justify-content:flex-end}
+.modal-btn{padding:10px 20px;border-radius:12px;border:none;font-size:14px;font-family:inherit;cursor:pointer;font-weight:500;min-height:44px}
 .modal-btn-cancel{background:#f0f0f0;color:#555}
 .modal-btn-save{background:var(--accent);color:#fff}
 .modal-btn-delete{background:var(--fav);color:#fff;margin-right:auto}
-.click-map-hint{font-size:10px;color:var(--planned);background:#e8f0fd;padding:5px 8px;border-radius:8px;margin-bottom:10px}
+.click-map-hint{font-size:12px;color:var(--planned);background:#e8f0fd;padding:8px 10px;border-radius:10px;margin-bottom:12px}
+
+/* ── BOTTOM TAB BAR (mobile only) ── */
+.tab-bar{display:none}
+
+/* ══════════════════════════════════════
+   MOBILE (iPhone 16 Pro = 402pt wide)
+   ══════════════════════════════════════ */
+@media(max-width:768px){
+  :root{--tab-h:calc(52px + var(--safe-b))}
+  header{padding:0 10px;padding-top:var(--safe-t);gap:6px;min-height:44px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  header::-webkit-scrollbar{display:none}
+  header h1{font-size:12px;display:none}
+  .city-tabs{gap:2px;flex-shrink:0}
+  .city-tab{padding:5px 12px;font-size:12px;min-height:32px}
+  .hdr-btn{display:none}
+  .body{flex-direction:column}
+
+  /* All panels stack, controlled by JS class */
+  aside{width:100%;height:100%;position:absolute;top:0;left:0;z-index:500;display:none;padding-bottom:var(--tab-h)}
+  aside.mob-active{display:flex}
+  #map{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+  .map-wrap.mob-active #map{z-index:400}
+  .cal-panel{position:absolute;top:0;left:0;width:100%;height:100%;border:none;box-shadow:none;z-index:500;display:none;padding-bottom:var(--tab-h)}
+  .cal-panel.mob-active{display:flex}
+
+  /* Leaflet controls above tab bar */
+  .leaflet-bottom{bottom:calc(var(--tab-h) + 8px)!important}
+
+  /* TAB BAR */
+  .tab-bar{display:flex;position:fixed;bottom:0;left:0;right:0;height:var(--tab-h);background:#fff;border-top:1px solid var(--border);z-index:2001;padding-bottom:var(--safe-b);align-items:flex-start}
+  .tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0;border:none;background:none;font-family:inherit;font-size:10px;color:var(--muted);cursor:pointer;transition:.15s}
+  .tab-bar button .tab-icon{font-size:20px;line-height:1}
+  .tab-bar button.tab-on{color:var(--accent);font-weight:600}
+
+  /* Cats horizontal scroll */
+  .cats{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8px 10px}
+  .cats::-webkit-scrollbar{display:none}
+  .cat-chip{flex-shrink:0;padding:4px 10px;font-size:11px;min-height:28px}
+
+  /* Bigger touch targets */
+  .filter-btn{padding:5px 12px;font-size:12px;min-height:32px}
+  .place-card{padding:12px 14px}
+  .place-card .pname{font-size:14px;padding-right:60px}
+  .place-card .pdesc{font-size:12px}
+  .card-action{width:32px;height:32px;font-size:16px}
+  .count-bar{padding:8px 12px;font-size:12px}
+  .add-place-btn{padding:6px 14px;font-size:12px;min-height:32px}
+
+  /* Filters */
+  .date-filter{margin-left:0;width:100%;margin-top:4px}
+  .date-filter input[type=date]{flex:1;font-size:12px;min-height:32px}
+
+  /* Calendar tweaks */
+  .cal-header{padding-top:calc(10px + var(--safe-t))}
+  .cal-place .cal-remove{opacity:1}
+
+  /* Modal full screen on mobile */
+  .modal{width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0}
+  .modal-header{padding-top:calc(14px + var(--safe-t))}
+  .modal-footer{padding-bottom:calc(16px + var(--safe-b))}
+
+  /* Popup wider on mobile */
+  .leaflet-popup-content{width:calc(100vw - 60px)!important;max-width:300px}
+
+  /* Search - prevent iOS zoom on focus */
+  .search-bar input{font-size:16px}
+}
 </style>
 </head>
 <body>
 <header>
-  <h1>🇬🇧 Англия и Шотландия · 26 июня — 10 июля</h1>
+  <h1>🇬🇧 UK Trip</h1>
   <div class="header-right">
     <div class="city-tabs">
       <button class="city-tab on" onclick="switchCity('both',this)">Все</button>
@@ -137,14 +212,14 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
   </div>
 </header>
 <div class="body">
-  <aside>
+  <aside id="listPanel">
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="🔍 Поиск…" oninput="render()"/>
       <select id="sortSelect" onchange="render()">
         <option value="default">Сорт.</option>
         <option value="name">Имя</option>
         <option value="date">Дата</option>
-        <option value="fav">Избр. ↑</option>
+        <option value="fav">Избр.↑</option>
         <option value="cat">Категория</option>
       </select>
     </div>
@@ -172,11 +247,20 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
     <div id="calBody"></div>
   </div>
 </div>
+
+<!-- MOBILE TAB BAR -->
+<div class="tab-bar" id="tabBar">
+  <button id="tabMap" class="tab-on" onclick="switchMobileView('map')"><span class="tab-icon">🗺</span>Карта</button>
+  <button id="tabList" onclick="switchMobileView('list')"><span class="tab-icon">📋</span>Список</button>
+  <button id="tabCal" onclick="switchMobileView('cal')"><span class="tab-icon">📅</span>Календарь</button>
+</div>
+
+<!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header"><h2 id="modalTitle">Добавить место</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="click-map-hint" id="clickHint">📍 Кликните на карту для координат</div>
+      <div class="click-map-hint" id="clickHint">📍 Нажмите на карту для координат</div>
       <div class="form-group"><label>Название</label><input type="text" id="fName"/></div>
       <div class="form-group"><label>Описание</label><textarea id="fDesc"></textarea></div>
       <div class="form-row">
@@ -505,14 +589,30 @@ function allPlaces(){return PLACES.concat(customPlaces);}
 var activeCity='both',activeCats={},markers={},selected=null,map,routeLines=[];
 var activeFilters={fav:false,visited:false,hasDate:false};
 var pickingCoords=false,editingCustomIdx=-1,calOpen=false,activeRouteDay=null;
+var mobileView='map';
 Object.keys(CATS).forEach(function(k){activeCats[k]=true;});
+
+function isMobile(){return window.innerWidth<=768;}
+
+/* ── MOBILE VIEW SWITCH ── */
+function switchMobileView(view){
+  mobileView=view;
+  document.getElementById('listPanel').classList.toggle('mob-active',view==='list');
+  document.getElementById('calPanel').classList.toggle('mob-active',view==='cal');
+  document.querySelectorAll('.tab-bar button').forEach(function(b){b.classList.remove('tab-on');});
+  document.getElementById('tab'+view.charAt(0).toUpperCase()+view.slice(1)).classList.add('tab-on');
+  if(view==='cal'){calOpen=true;renderCalendar();}
+  if(view==='map'){map.invalidateSize();}
+}
 
 function init(){
   loadUD();loadCP();
-  map=L.map('map',{center:[54.5,-2.5],zoom:6});
+  map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CartoDB',maxZoom:19}).addTo(map);
+  if(isMobile()){L.control.zoom({position:'topright'}).addTo(map);}
   map.on('click',onMapClick);
   buildCats();buildCatSelect();render();
+  window.addEventListener('resize',function(){map.invalidateSize();});
 }
 
 function buildCats(){
@@ -535,7 +635,7 @@ function makeIcon(color,isSel,ud){
   var check=(ud&&ud.visited)?'<text x="16" y="30" text-anchor="middle" font-size="8" fill="#27ae60">✓</text>':'';
   return L.divIcon({className:'',html:'<svg width="32" height="32" viewBox="0 0 32 32">'+ring+'<circle cx="16" cy="16" r="'+s+'" fill="'+color+'" stroke="#fff" stroke-width="2"/>'+heart+check+'</svg>',iconSize:[32,32],iconAnchor:[16,16]});
 }
-function mkLinks(p,stop){var s=stop?' onclick="event.stopPropagation()"':'',ls=[];if(p.website)ls.push('<a href="'+p.website+'" target="_blank"'+s+'>🌐</a>');if(p.wiki)ls.push('<a href="'+p.wiki+'" target="_blank"'+s+'>📖</a>');return ls.length?'<div class="'+(stop?'links':'popup-links')+'">'+ls.join('')+'</div>':'';}
+function mkLinks(p,stop){var s=stop?' onclick="event.stopPropagation()"':'',ls=[];if(p.website)ls.push('<a href="'+p.website+'" target="_blank"'+s+'>🌐 Сайт</a>');if(p.wiki)ls.push('<a href="'+p.wiki+'" target="_blank"'+s+'>📖 Wiki</a>');return ls.length?'<div class="'+(stop?'links':'popup-links')+'">'+ls.join('')+'</div>':'';}
 
 function render(){
   Object.keys(markers).forEach(function(i){map.removeLayer(markers[i]);});markers={};
@@ -571,12 +671,12 @@ function render(){
     var noteHtml=ud.note?'<div class="popup-note-show">📝 '+ud.note+'</div>':'';
     m.bindPopup('<div class="popup-inner"><div class="popup-tag" style="color:'+c+'">'+catLabel+'</div><div class="popup-name">'+p.name+'</div><div class="popup-desc">'+p.desc+'</div>'+noteHtml+mkLinks(p,false)+
       '<div class="popup-actions">'+
-      '<button class="popup-action-btn '+(ud.fav?'on-fav':'')+'" onclick="toggleFav('+i+')">'+(ud.fav?'♥':'♡')+'</button>'+
-      '<button class="popup-action-btn '+(ud.visited?'on-vis':'')+'" onclick="toggleVisited('+i+')">'+(ud.visited?'✓':'○')+'</button>'+
+      '<button class="popup-action-btn '+(ud.fav?'on-fav':'')+'" onclick="toggleFav('+i+')">'+(ud.fav?'♥ Да':'♡ Избр.')+'</button>'+
+      '<button class="popup-action-btn '+(ud.visited?'on-vis':'')+'" onclick="toggleVisited('+i+')">'+(ud.visited?'✓ Было':'○ Было')+'</button>'+
       (p._custom?'<button class="popup-action-btn" onclick="openEditModal('+i+')">✎</button>':'')+
       '<input type="date" class="popup-date-input" value="'+(ud.plannedDate||'')+'" onchange="setDate('+i+',this.value)"/>'+
       '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
-      '</div></div>',{maxWidth:280});
+      '</div></div>',{maxWidth:300});
     (function(idx,mk){mk.on('click',function(){selectPlace(idx);});})(i,m);
     markers[i]=m;
 
@@ -604,7 +704,9 @@ function render(){
 
 function selectPlace(idx){
   selected=(selected===idx)?null:idx;
-  var p=allPlaces()[idx];render();
+  var p=allPlaces()[idx];
+  if(isMobile()&&selected!==null) switchMobileView('map');
+  render();
   if(selected!==null){map.setView([p.lat,p.lng],14,{animate:true});if(markers[idx])markers[idx].openPopup();var card=document.getElementById('card-'+idx);if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 function switchCity(c,btn){activeCity=c;selected=null;document.querySelectorAll('.city-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');var views={both:{c:[54.5,-2.5],z:6},london:{c:[51.505,-0.11],z:11},edinburgh:{c:[55.953,-3.188],z:12},glasgow:{c:[55.864,-4.252],z:13}};var v=views[c];map.setView(v.c,v.z,{animate:true});render();}
@@ -614,7 +716,10 @@ function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');render
 function setNote(i,v){setUD(placeKey(allPlaces()[i]),'note',v||'');}
 
 /* ── CALENDAR ── */
-function toggleCalendar(){calOpen=!calOpen;document.getElementById('calPanel').classList.toggle('show',calOpen);document.getElementById('calToggle').classList.toggle('on',calOpen);if(calOpen)renderCalendar();}
+function toggleCalendar(){
+  if(isMobile()){switchMobileView('cal');return;}
+  calOpen=!calOpen;document.getElementById('calPanel').classList.toggle('show',calOpen);document.getElementById('calToggle').classList.toggle('on',calOpen);if(calOpen)renderCalendar();
+}
 
 function renderCalendar(){
   var body=document.getElementById('calBody');body.innerHTML='';
@@ -635,11 +740,10 @@ function renderCalendar(){
     });
     div.appendChild(bd);body.appendChild(div);
   });
-  // Unassigned favs
   var un=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push({p:p,i:i});});
   if(un.length){
     var div=document.createElement('div');div.className='cal-day';
-    div.innerHTML='<div class="cal-day-header cal-unassigned" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>⭐ Без даты (избранные)</span><span class="cal-day-count">'+un.length+'</span></div>';
+    div.innerHTML='<div class="cal-day-header cal-unassigned" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>⭐ Без даты</span><span class="cal-day-count">'+un.length+'</span></div>';
     var bd=document.createElement('div');bd.className='cal-day-body';
     un.forEach(function(item){var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';var el=document.createElement('div');el.className='cal-place';el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span><span class="cal-pname">'+item.p.name+'</span>';el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);});
     div.appendChild(bd);body.appendChild(div);
@@ -648,7 +752,11 @@ function renderCalendar(){
 
 /* ── ROUTES ── */
 function clearRoute(){routeLines.forEach(function(l){map.removeLayer(l);});routeLines=[];}
-function showDayRoute(day){if(activeRouteDay===day){activeRouteDay=null;clearRoute();renderCalendar();return;}activeRouteDay=day;drawRoute();renderCalendar();}
+function showDayRoute(day){
+  if(activeRouteDay===day){activeRouteDay=null;clearRoute();renderCalendar();return;}
+  activeRouteDay=day;drawRoute();renderCalendar();
+  if(isMobile())switchMobileView('map');
+}
 function drawRoute(){
   clearRoute();if(!activeRouteDay)return;
   var places=allPlaces(),pts=[];
@@ -656,13 +764,13 @@ function drawRoute(){
   if(pts.length<2)return;
   var line=L.polyline(pts,{color:'#3498db',weight:3,dashArray:'8 6',opacity:0.7}).addTo(map);routeLines.push(line);
   pts.forEach(function(pt,idx){
-    var num=L.divIcon({className:'',html:'<div style="background:#3498db;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)">'+(idx+1)+'</div>',iconSize:[20,20],iconAnchor:[10,10]});
+    var num=L.divIcon({className:'',html:'<div style="background:#3498db;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)">'+(idx+1)+'</div>',iconSize:[22,22],iconAnchor:[11,11]});
     routeLines.push(L.marker(pt,{icon:num,interactive:false}).addTo(map));
   });
   map.fitBounds(L.latLngBounds(pts).pad(0.15),{animate:true});
 }
 
-/* ── EXPORT ICS ── */
+/* ── EXPORT ── */
 function exportICS(){
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//UK Trip//EN','CALSCALE:GREGORIAN'];
   allPlaces().forEach(function(p){
@@ -676,21 +784,17 @@ function exportICS(){
   var blob=new Blob([lines.join('\r\n')],{type:'text/calendar'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='uk_trip.ics';a.click();
 }
-
-/* ── PRINT ── */
 function exportPrint(){
   var w=window.open('','_blank');
-  var h='<html><head><meta charset="utf-8"><title>UK Trip</title><style>body{font-family:-apple-system,sans-serif;padding:20px;font-size:12px}h1{font-size:18px;margin-bottom:10px}h2{font-size:13px;margin:14px 0 4px;padding:4px 8px;background:#f0f0f0;border-radius:6px}.p{padding:3px 0;border-bottom:1px solid #eee;display:flex;gap:6px}.ct{font-size:9px;padding:1px 5px;border-radius:5px;color:#fff;white-space:nowrap}.n{font-weight:600}.d{color:#666;font-size:11px}.nt{color:#8854d0;font-style:italic;font-size:11px}</style></head><body>';
+  var h='<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>UK Trip</title><style>body{font-family:-apple-system,sans-serif;padding:20px;font-size:13px}h1{font-size:18px}h2{font-size:14px;margin:14px 0 4px;padding:4px 8px;background:#f0f0f0;border-radius:6px}.p{padding:4px 0;border-bottom:1px solid #eee}.ct{font-size:10px;padding:1px 6px;border-radius:5px;color:#fff;white-space:nowrap;display:inline-block;margin-right:4px}.n{font-weight:600}.d{color:#666}.nt{color:#8854d0;font-style:italic}</style></head><body>';
   h+='<h1>🇬🇧 UK Trip · 26.06 — 10.07.2026</h1>';
   var days=tripDays(),places=allPlaces();
   days.forEach(function(day){
     var dp=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,ud:ud});});
     if(!dp.length)return;
     h+='<h2>'+fmtDay(day)+' ('+dp.length+')</h2>';
-    dp.forEach(function(it){var c=CATS[it.p.cat]?CATS[it.p.cat].color:'#999';h+='<div class="p"><span class="ct" style="background:'+c+'">'+(CATS[it.p.cat]?CATS[it.p.cat].label:'')+'</span><span><span class="n">'+it.p.name+'</span> — <span class="d">'+it.p.desc+'</span>'+(it.ud.note?' <span class="nt">📝 '+it.ud.note+'</span>':'')+'</span></div>';});
+    dp.forEach(function(it){var c=CATS[it.p.cat]?CATS[it.p.cat].color:'#999';h+='<div class="p"><span class="ct" style="background:'+c+'">'+(CATS[it.p.cat]?CATS[it.p.cat].label:'')+'</span><span class="n">'+it.p.name+'</span> — <span class="d">'+it.p.desc+'</span>'+(it.ud.note?' <span class="nt">📝 '+it.ud.note+'</span>':'')+'</div>';});
   });
-  var un=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push(p);});
-  if(un.length){h+='<h2>⭐ Без даты</h2>';un.forEach(function(p){var c=CATS[p.cat]?CATS[p.cat].color:'#999';h+='<div class="p"><span class="ct" style="background:'+c+'">'+(CATS[p.cat]?CATS[p.cat].label:'')+'</span><span class="n">'+p.name+'</span> — <span class="d">'+p.desc+'</span></div>';});}
   h+='</body></html>';w.document.write(h);w.document.close();setTimeout(function(){w.print();},400);
 }
 
@@ -698,8 +802,8 @@ function exportPrint(){
 function onMapClick(e){if(!pickingCoords)return;document.getElementById('fLat').value=e.latlng.lat.toFixed(4);document.getElementById('fLng').value=e.latlng.lng.toFixed(4);document.getElementById('clickHint').innerHTML='✅ Координаты выбраны!';document.getElementById('clickHint').style.background='#e8f8ef';document.getElementById('clickHint').style.color='#27ae60';}
 
 /* ── MODAL ── */
-function openAddModal(){editingCustomIdx=-1;document.getElementById('modalTitle').textContent='Добавить место';document.getElementById('modalDelete').style.display='none';['fName','fDesc','fLat','fLng','fWebsite','fWiki'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fCity').value=activeCity==='both'?'london':activeCity;document.getElementById('fCat').value='restaurant';document.getElementById('clickHint').innerHTML='📍 Кликните на карту для координат';document.getElementById('clickHint').style.background='#e8f0fd';document.getElementById('clickHint').style.color='#3498db';document.getElementById('modalOverlay').classList.add('show');pickingCoords=true;}
-function openEditModal(idx){var p=allPlaces()[idx];if(!p._custom)return;editingCustomIdx=customPlaces.indexOf(p);document.getElementById('modalTitle').textContent='Редактировать';document.getElementById('modalDelete').style.display='inline-block';document.getElementById('fName').value=p.name;document.getElementById('fDesc').value=p.desc;document.getElementById('fCity').value=p.city;document.getElementById('fCat').value=p.cat;document.getElementById('fLat').value=p.lat;document.getElementById('fLng').value=p.lng;document.getElementById('fWebsite').value=p.website||'';document.getElementById('fWiki').value=p.wiki||'';document.getElementById('clickHint').innerHTML='📍 Кликните для изменения координат';document.getElementById('clickHint').style.background='#e8f0fd';document.getElementById('clickHint').style.color='#3498db';document.getElementById('modalOverlay').classList.add('show');pickingCoords=true;}
+function openAddModal(){editingCustomIdx=-1;document.getElementById('modalTitle').textContent='Добавить место';document.getElementById('modalDelete').style.display='none';['fName','fDesc','fLat','fLng','fWebsite','fWiki'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fCity').value=activeCity==='both'?'london':activeCity;document.getElementById('fCat').value='restaurant';document.getElementById('clickHint').innerHTML='📍 Нажмите на карту для координат';document.getElementById('clickHint').style.background='#e8f0fd';document.getElementById('clickHint').style.color='#3498db';document.getElementById('modalOverlay').classList.add('show');pickingCoords=true;}
+function openEditModal(idx){var p=allPlaces()[idx];if(!p._custom)return;editingCustomIdx=customPlaces.indexOf(p);document.getElementById('modalTitle').textContent='Редактировать';document.getElementById('modalDelete').style.display='inline-block';document.getElementById('fName').value=p.name;document.getElementById('fDesc').value=p.desc;document.getElementById('fCity').value=p.city;document.getElementById('fCat').value=p.cat;document.getElementById('fLat').value=p.lat;document.getElementById('fLng').value=p.lng;document.getElementById('fWebsite').value=p.website||'';document.getElementById('fWiki').value=p.wiki||'';document.getElementById('clickHint').innerHTML='📍 Нажмите на карту для изменения координат';document.getElementById('clickHint').style.background='#e8f0fd';document.getElementById('clickHint').style.color='#3498db';document.getElementById('modalOverlay').classList.add('show');pickingCoords=true;}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('show');pickingCoords=false;}
 function savePlace(){var name=document.getElementById('fName').value.trim();if(!name){alert('Укажите название');return;}var lat=parseFloat(document.getElementById('fLat').value),lng=parseFloat(document.getElementById('fLng').value);if(isNaN(lat)||isNaN(lng)){alert('Укажите координаты');return;}var place={city:document.getElementById('fCity').value,cat:document.getElementById('fCat').value,name:name,desc:document.getElementById('fDesc').value.trim(),lat:lat,lng:lng,_custom:true};var w=document.getElementById('fWebsite').value.trim(),wi=document.getElementById('fWiki').value.trim();if(w)place.website=w;if(wi)place.wiki=wi;if(editingCustomIdx>=0)customPlaces[editingCustomIdx]=place;else customPlaces.push(place);saveCP();closeModal();selected=null;render();}
 function deleteCustomPlace(){if(editingCustomIdx<0)return;if(!confirm('Удалить?'))return;customPlaces.splice(editingCustomIdx,1);saveCP();closeModal();selected=null;render();}
