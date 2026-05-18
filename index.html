@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--border:#e8e8e5;--muted:#888;--bg:#f7f6f3;--accent:#1a1a1a;--fav:#e74c3c;--visited:#27ae60;--planned:#3498db;--cal:#8854d0;--sidebar:320px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{background:#fff;border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;gap:10px;height:48px;flex-shrink:0;z-index:1000}
+header h1{font-size:13px;font-weight:600;white-space:nowrap}
+.header-right{display:flex;gap:4px;margin-left:auto;align-items:center}
+.city-tabs{display:flex;gap:3px}
+.city-tab{padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s}
+.city-tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hdr-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:3px;margin-left:6px}
+.hdr-btn:hover{background:#f5f5f5}
+.hdr-btn.on{background:var(--cal);color:#fff;border-color:var(--cal)}
+.body{display:flex;flex:1;overflow:hidden;position:relative}
+aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;background:#fff;border-right:1px solid var(--border);overflow:hidden}
+.search-bar{padding:6px 10px;border-bottom:1px solid var(--border);display:flex;gap:4px;align-items:center}
+.search-bar input{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fafaf8;outline:none}
+.search-bar input:focus{border-color:#bbb;background:#fff}
+.search-bar select{padding:4px;border:1px solid var(--border);border-radius:8px;font-size:10px;font-family:inherit;background:#fff;cursor:pointer}
+.cats{padding:6px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:3px}
+.cat-chip{padding:2px 7px;border-radius:12px;border:1px solid;font-size:10px;cursor:pointer;background:#fff;transition:.15s}
+.cat-chip.off{opacity:.2}
+.filters-bar{padding:5px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:3px;align-items:center;background:#fafaf8}
+.filter-btn{padding:2px 8px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;transition:.15s}
+.filter-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.date-filter{display:flex;align-items:center;gap:3px;margin-left:auto}
+.date-filter label{font-size:9px;color:var(--muted)}
+.date-filter input[type=date]{font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:6px;background:#fff;font-family:inherit}
+.count-bar{padding:5px 10px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafaf8;display:flex;justify-content:space-between;align-items:center}
+.add-place-btn{background:var(--accent);color:#fff;border:none;padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;font-family:inherit}
+.places-list{overflow-y:auto;flex:1}
+.place-card{padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s;position:relative}
+.place-card:hover{background:#f9f9f7}
+.place-card.active{background:#f0f0ec;border-left:3px solid #333}
+.place-card .pname{font-size:12px;font-weight:500;margin-bottom:2px;padding-right:50px}
+.place-card .pdesc{font-size:10px;color:var(--muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.place-card .pnote{font-size:10px;color:var(--cal);font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.place-card .ptag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:8px;border:1px solid;margin-bottom:2px;font-weight:500}
+.place-card .pcity{font-size:9px;color:#aaa;margin-left:3px}
+.links{margin-top:3px;display:flex;gap:5px}
+.links a{font-size:9px;color:#0066cc;text-decoration:none}
+.card-actions{position:absolute;top:6px;right:6px;display:flex;gap:1px}
+.card-action{width:20px;height:20px;border:none;border-radius:50%;background:transparent;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:.3;transition:.15s}
+.card-action:hover{opacity:1;background:rgba(0,0,0,.05)}
+.card-action.fav-on{opacity:1;color:var(--fav)}
+.card-action.vis-on{opacity:1;color:var(--visited)}
+.card-badges{display:flex;gap:3px;align-items:center;margin-bottom:2px;flex-wrap:wrap}
+.badge{font-size:8px;padding:1px 4px;border-radius:5px;font-weight:500}
+.badge-fav{background:#fde8e8;color:var(--fav)}
+.badge-vis{background:#e8f8ef;color:var(--visited)}
+.badge-date{background:#e8f0fd;color:var(--planned)}
+.badge-custom{background:#f3e8fd;color:#8e44ad}
+.badge-note{background:#fff3e0;color:#e67e22}
+#map{flex:1}
+.leaflet-popup-content-wrapper{border-radius:10px;padding:0;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.leaflet-popup-content{margin:0;width:270px!important}
+.popup-inner{padding:10px 12px}
+.popup-tag{font-size:10px;font-weight:600;margin-bottom:2px}
+.popup-name{font-size:13px;font-weight:600;margin-bottom:3px}
+.popup-desc{font-size:11px;color:#555;line-height:1.4;margin-bottom:5px}
+.popup-note-show{font-size:10px;color:var(--cal);font-style:italic;margin-bottom:5px;padding:4px 6px;background:#f8f4ff;border-radius:6px}
+.popup-links{display:flex;gap:8px;padding-top:4px;border-top:1px solid #eee}
+.popup-links a{font-size:10px;color:#0066cc;text-decoration:none}
+.popup-actions{display:flex;gap:4px;padding-top:5px;border-top:1px solid #eee;margin-top:5px;flex-wrap:wrap;align-items:center}
+.popup-action-btn{padding:2px 7px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;font-family:inherit}
+.popup-action-btn.on-fav{background:#fde8e8;border-color:#e7a1a1;color:var(--fav)}
+.popup-action-btn.on-vis{background:#e8f8ef;border-color:#a1d4b7;color:var(--visited)}
+.popup-date-input{font-size:10px;padding:2px 4px;border:1px solid var(--border);border-radius:8px;font-family:inherit;width:110px}
+.popup-note-input{font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:8px;font-family:inherit;width:100%;margin-top:4px;resize:none;height:34px}
+/* Calendar */
+.cal-panel{display:none;position:absolute;top:0;right:0;width:370px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-4px 0 20px rgba(0,0,0,.08);z-index:999;overflow-y:auto;flex-direction:column}
+.cal-panel.show{display:flex}
+.cal-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.cal-header h3{font-size:14px;font-weight:600}
+.cal-export-btns{display:flex;gap:4px}
+.cal-export-btn{padding:3px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;font-family:inherit}
+.cal-export-btn:hover{background:#f5f5f5}
+.cal-day{border-bottom:1px solid var(--border)}
+.cal-day-header{padding:7px 14px;background:#fafaf8;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.cal-day-header:hover{background:#f0f0ec}
+.cal-day-count{font-size:10px;font-weight:400;color:var(--muted);background:var(--border);padding:1px 6px;border-radius:8px}
+.cal-day-count.warn{background:#fde8e8;color:var(--fav)}
+.cal-day-body.collapsed{display:none}
+.cal-place{padding:5px 14px;display:flex;align-items:center;gap:8px;font-size:11px;border-top:1px solid #f0f0ec;cursor:pointer}
+.cal-place:hover{background:#f9f9f7}
+.cal-place .cal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cal-place .cal-pname{flex:1;font-weight:500}
+.cal-place .cal-remove{opacity:0;font-size:14px;cursor:pointer;color:var(--muted)}
+.cal-place:hover .cal-remove{opacity:1}
+.cal-empty{padding:8px 14px;font-size:11px;color:#ccc;font-style:italic}
+.cal-route-btn{padding:2px 8px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:10px;cursor:pointer;font-family:inherit}
+.cal-route-btn:hover{background:var(--planned);color:#fff;border-color:var(--planned)}
+.cal-route-btn.on{background:var(--planned);color:#fff;border-color:var(--planned)}
+.cal-unassigned{background:#fff3e0}
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:2000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:14px;width:420px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2)}
+.modal-header{padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:15px;font-weight:600}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:4px 8px;border-radius:8px}
+.modal-close:hover{background:#f0f0f0}
+.modal-body{padding:14px 18px}
+.form-group{margin-bottom:10px}
+.form-group label{display:block;font-size:10px;font-weight:600;color:#555;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:#999}
+.form-group textarea{resize:vertical;min-height:50px}
+.form-row{display:flex;gap:8px}
+.form-row .form-group{flex:1}
+.modal-footer{padding:10px 18px 14px;display:flex;gap:6px;justify-content:flex-end}
+.modal-btn{padding:6px 16px;border-radius:10px;border:none;font-size:12px;font-family:inherit;cursor:pointer;font-weight:500}
+.modal-btn-cancel{background:#f0f0f0;color:#555}
+.modal-btn-save{background:var(--accent);color:#fff}
+.modal-btn-delete{background:var(--fav);color:#fff;margin-right:auto}
+.click-map-hint{font-size:10px;color:var(--planned);background:#e8f0fd;padding:5px 8px;border-radius:8px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🇬🇧 Англия и Шотландия · 26 июня — 10 июля</h1>
+  <div class="header-right">
+    <div class="city-tabs">
+      <button class="city-tab on" onclick="switchCity('both',this)">Все</button>
+      <button class="city-tab" onclick="switchCity('london',this)">Лондон</button>
+      <button class="city-tab" onclick="switchCity('edinburgh',this)">Эдинбург</button>
+      <button class="city-tab" onclick="switchCity('glasgow',this)">Глазго</button>
+    </div>
+    <button class="hdr-btn" id="calToggle" onclick="toggleCalendar()">📅 Календарь</button>
+  </div>
+</header>
+<div class="body">
+  <aside>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="🔍 Поиск…" oninput="render()"/>
+      <select id="sortSelect" onchange="render()">
+        <option value="default">Сорт.</option>
+        <option value="name">Имя</option>
+        <option value="date">Дата</option>
+        <option value="fav">Избр. ↑</option>
+        <option value="cat">Категория</option>
+      </select>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div class="filters-bar">
+      <button class="filter-btn" id="filterFav" onclick="toggleFilter('fav')">♥ Избранное</button>
+      <button class="filter-btn" id="filterVis" onclick="toggleFilter('visited')">✓ Посещено</button>
+      <button class="filter-btn" id="filterDate" onclick="toggleFilter('hasDate')">📅 С датой</button>
+      <div class="date-filter">
+        <label>с</label><input type="date" id="dateFrom" onchange="render()"/>
+        <label>по</label><input type="date" id="dateTo" onchange="render()"/>
+      </div>
+    </div>
+    <div class="count-bar"><span id="countText"></span><button class="add-place-btn" onclick="openAddModal()">＋ Добавить</button></div>
+    <div class="places-list" id="list"></div>
+  </aside>
+  <div id="map"></div>
+  <div class="cal-panel" id="calPanel">
+    <div class="cal-header"><h3>📅 План по дням</h3>
+      <div class="cal-export-btns">
+        <button class="cal-export-btn" onclick="exportICS()">📥 .ics</button>
+        <button class="cal-export-btn" onclick="exportPrint()">🖨 Печать</button>
+      </div>
+    </div>
+    <div id="calBody"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modalTitle">Добавить место</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="click-map-hint" id="clickHint">📍 Кликните на карту для координат</div>
+      <div class="form-group"><label>Название</label><input type="text" id="fName"/></div>
+      <div class="form-group"><label>Описание</label><textarea id="fDesc"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Город</label><select id="fCity"><option value="london">Лондон</option><option value="edinburgh">Эдинбург</option><option value="glasgow">Глазго</option></select></div>
+        <div class="form-group"><label>Категория</label><select id="fCat"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Широта</label><input type="number" step="0.0001" id="fLat"/></div>
+        <div class="form-group"><label>Долгота</label><input type="number" step="0.0001" id="fLng"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Сайт</label><input type="url" id="fWebsite"/></div>
+        <div class="form-group"><label>Wiki</label><input type="url" id="fWiki"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-delete" id="modalDelete" onclick="deleteCustomPlace()" style="display:none">Удалить</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="modal-btn modal-btn-save" onclick="savePlace()">Сохранить</button>
+    </div>
+  </div>
+</div>
+<script>
+var CATS={theatre:{label:"Театр",color:"#7F77DD"},music:{label:"Музыка",color:"#1D9E75"},festival:{label:"Фестиваль",color:"#D4537E"},museum:{label:"Музей",color:"#378ADD"},art:{label:"Искусство",color:"#D85A30"},arch:{label:"Архитектура",color:"#5B6A8A"},design_shop:{label:"Дизайн/Шоурум",color:"#B0508A"},restaurant:{label:"Рестораны/Еда",color:"#E67E22"},shopping:{label:"Шоппинг",color:"#E91E63"},attraction:{label:"Достопримечательности",color:"#9B59B6"},market:{label:"Рынок/Винтаж",color:"#BA7517"},nature:{label:"Природа",color:"#639922"},district:{label:"Район",color:"#777"},daytrip:{label:"Поездки",color:"#993556"}};
+var PLACES=[
+  {city:"london",cat:"theatre",name:"London Palladium",desc:"Jesus Christ Superstar — Сэм Райдер, Boy George и др. До 5 сентября",lat:51.5152,lng:-0.1419,wiki:"https://en.wikipedia.org/wiki/London_Palladium",website:"https://lwtheatres.co.uk/theatres/london-palladium"},
+  {city:"london",cat:"theatre",name:"Wyndham's Theatre",desc:"To Kill a Mockingbird — адаптация Аарона Соркина. С 25 июня",lat:51.5109,lng:-0.1268,wiki:"https://en.wikipedia.org/wiki/Wyndham%27s_Theatre",website:"https://www.delfontmackintosh.co.uk/venues/wyndhams-theatre"},
+  {city:"london",cat:"theatre",name:"Bridge Theatre",desc:"The Oresteia — реж. Саймон Стоун. С 2 июля",lat:51.5057,lng:-0.0870,wiki:"https://en.wikipedia.org/wiki/Bridge_Theatre",website:"https://bridgetheatre.co.uk"},
+  {city:"london",cat:"theatre",name:"Noel Coward Theatre",desc:"Cyrano de Bergerac — Адриан Лестер. С 13 июня",lat:51.5115,lng:-0.1262,wiki:"https://en.wikipedia.org/wiki/Noel_Coward_Theatre",website:"https://www.delfontmackintosh.co.uk/venues/noel-coward-theatre"},
+  {city:"london",cat:"theatre",name:"The Old Vic",desc:"Glengarry Glen Ross — постановка Патрика Марбера. До 18 июля",lat:51.5053,lng:-0.1113,wiki:"https://en.wikipedia.org/wiki/Old_Vic",website:"https://www.oldvictheatre.com"},
+  {city:"london",cat:"theatre",name:"Menier Chocolate Factory",desc:"Equus — Тоби Стивенс в психологическом триллере Шаффера",lat:51.5033,lng:-0.0908,wiki:"https://en.wikipedia.org/wiki/Menier_Chocolate_Factory",website:"https://www.menierchocolatefactory.com"},
+  {city:"london",cat:"theatre",name:"Regent's Park Open Air Theatre",desc:"A Midsummer Night's Dream — Шекспир под открытым небом. С 20 июня",lat:51.5272,lng:-0.1535,wiki:"https://en.wikipedia.org/wiki/Regent%27s_Park_Open_Air_Theatre",website:"https://openairtheatre.com"},
+  {city:"london",cat:"theatre",name:"Cambridge Theatre",desc:"Showstopper! The Improvised Musical — зрители задают тему каждый вечер",lat:51.5118,lng:-0.1262,wiki:"https://en.wikipedia.org/wiki/Cambridge_Theatre",website:"https://lwtheatres.co.uk/theatres/cambridge-theatre"},
+  {city:"london",cat:"music",name:"Hyde Park — BST Festival",desc:"Lewis Capaldi, Mumford & Sons, Pitbull, Maroon 5, Garth Brooks. 27 июня, 3–4, 10–12 июля",lat:51.5073,lng:-0.1657,wiki:"https://en.wikipedia.org/wiki/Hyde_Park,_London",website:"https://www.bst-hydepark.com"},
+  {city:"london",cat:"music",name:"Wembley Stadium",desc:"Harry Styles + Shania Twain — 1 июля",lat:51.5560,lng:-0.2796,wiki:"https://en.wikipedia.org/wiki/Wembley_Stadium",website:"https://www.wembleystadium.com"},
+  {city:"london",cat:"music",name:"Finsbury Park",desc:"Wolf Alice — инди-рок, самый большой концерт группы. 5 июля",lat:51.5643,lng:-0.1005,wiki:"https://en.wikipedia.org/wiki/Finsbury_Park",website:"https://www.haringey.gov.uk/finsbury-park"},
+  {city:"london",cat:"music",name:"ABBA Arena (Stratford)",desc:"ABBA Voyage — голограммы + живая группа из 10 человек. Ежедневно",lat:51.5420,lng:-0.0054,wiki:"https://en.wikipedia.org/wiki/ABBA_Voyage",website:"https://abbavoyage.com"},
+  {city:"london",cat:"music",name:"Somerset House",desc:"Summer Series — живая музыка во дворе. 16–26 июля",lat:51.5115,lng:-0.1160,wiki:"https://en.wikipedia.org/wiki/Somerset_House",website:"https://www.somersethouse.org.uk"},
+  {city:"london",cat:"music",name:"Alexandra Palace",desc:"Kaleidoscope Festival: Rudimental, Groove Armada, MJ Cole. 11 июля",lat:51.5942,lng:-0.1296,wiki:"https://en.wikipedia.org/wiki/Alexandra_Palace",website:"https://www.alexandrapalace.com"},
+  {city:"london",cat:"music",name:"Ronnie Scott's",desc:"Легендарный джазовый клуб с 1959 года. Джаз, соул, фанк каждый вечер",lat:51.5131,lng:-0.1314,wiki:"https://en.wikipedia.org/wiki/Ronnie_Scott%27s_Jazz_Club",website:"https://www.ronniescotts.co.uk"},
+  {city:"london",cat:"music",name:"Southbank Centre (Meltdown)",desc:"Harry Styles: Meltdown — кураторский фестиваль, конец июня",lat:51.5054,lng:-0.1145,wiki:"https://en.wikipedia.org/wiki/Southbank_Centre",website:"https://www.southbankcentre.co.uk"},
+  {city:"london",cat:"music",name:"The Jazz Cafe",desc:"Легендарный джаз-клуб Camden с 1990. Джаз, соул, funk, hip-hop. Dinner & show",lat:51.5423,lng:-0.1433,wiki:"https://en.wikipedia.org/wiki/Jazz_Cafe",website:"https://thejazzcafelondon.com"},
+  {city:"london",cat:"music",name:"Pizza Express Jazz Club",desc:"Джаз в подвале, пицца наверху. Dean Street, Soho. Интимная атмосфера с 1969",lat:51.5136,lng:-0.1315,website:"https://www.pizzaexpresslive.com/venues/pizza-express-jazz-club-soho"},
+  {city:"london",cat:"music",name:"606 Club",desc:"Подвальный джаз-клуб в Chelsea с 1976. Только для членов клуба, но членство бесплатное!",lat:51.4813,lng:-0.1722,website:"https://www.606club.co.uk"},
+  {city:"london",cat:"music",name:"Vortex Jazz Club",desc:"Общественный джаз-клуб в Dalston. Экспериментальный джаз, импровизация. Недорого",lat:51.5467,lng:-0.0757,website:"https://www.vortexjazz.co.uk"},
+  {city:"london",cat:"festival",name:"Trafalgar Square (West End LIVE)",desc:"Бесплатные выступления кастов мюзиклов. 20–21 июня",lat:51.5080,lng:-0.1281,wiki:"https://en.wikipedia.org/wiki/Trafalgar_Square",website:"https://officiallondontheatre.com/west-end-live"},
+  {city:"london",cat:"festival",name:"Pride in London",desc:"Парад 4 июля, 1.5 млн зрителей. Главная сцена на Trafalgar Square — бесплатно",lat:51.5028,lng:-0.1523,wiki:"https://en.wikipedia.org/wiki/Pride_in_London",website:"https://prideinlondon.org"},
+  {city:"london",cat:"festival",name:"Wimbledon",desc:"Главный теннисный турнир мира. Конец июня — начало июля",lat:51.4344,lng:-0.2139,wiki:"https://en.wikipedia.org/wiki/Wimbledon_Championships",website:"https://www.wimbledon.com"},
+  {city:"london",cat:"festival",name:"Victoria Park (LIDO Festival)",desc:"Bombay Bicycle Club, Father John Misty, CMAT, Maribou State, Metronomy",lat:51.5376,lng:-0.0381,wiki:"https://en.wikipedia.org/wiki/Victoria_Park,_London",website:"https://lidofestival.com"},
+  {city:"london",cat:"museum",name:"British Museum",desc:"Розеттский камень, египетские мумии, Парфенонский фриз. Выставка Samurai. Бесплатно",lat:51.5194,lng:-0.1270,wiki:"https://en.wikipedia.org/wiki/British_Museum",website:"https://www.britishmuseum.org"},
+  {city:"london",cat:"museum",name:"Tate Modern",desc:"Frida Kahlo (с 25 июня!), Julio Le Parc, Tracey Emin",lat:51.5076,lng:-0.0994,wiki:"https://en.wikipedia.org/wiki/Tate_Modern",website:"https://www.tate.org.uk/visit/tate-modern"},
+  {city:"london",cat:"museum",name:"Tate Britain",desc:"Британское искусство от Тёрнера. Выставка Whistler до 27 сентября",lat:51.4913,lng:-0.1277,wiki:"https://en.wikipedia.org/wiki/Tate_Britain",website:"https://www.tate.org.uk/visit/tate-britain"},
+  {city:"london",cat:"museum",name:"National Gallery",desc:"Боттичелли, Ван Гог, Моне, Рембрандт. Выставка Zurbarán до 23 августа",lat:51.5089,lng:-0.1283,wiki:"https://en.wikipedia.org/wiki/National_Gallery",website:"https://www.nationalgallery.org.uk"},
+  {city:"london",cat:"museum",name:"V&A Museum",desc:"Крупнейший музей декоративного искусства. Schiaparelli до 8 ноября. Бесплатно",lat:51.4966,lng:-0.1722,wiki:"https://en.wikipedia.org/wiki/Victoria_and_Albert_Museum",website:"https://www.vam.ac.uk"},
+  {city:"london",cat:"museum",name:"Natural History Museum",desc:"Скелет синего кита, динозавры, минералы. Бесплатно",lat:51.4966,lng:-0.1764,wiki:"https://en.wikipedia.org/wiki/Natural_History_Museum,_London",website:"https://www.nhm.ac.uk"},
+  {city:"london",cat:"museum",name:"National Portrait Gallery",desc:"Портреты от Тюдоров до Grayson Perry. После реновации",lat:51.5097,lng:-0.1281,wiki:"https://en.wikipedia.org/wiki/National_Portrait_Gallery,_London",website:"https://www.npg.org.uk"},
+  {city:"london",cat:"museum",name:"Imperial War Museum",desc:"Мировые войны, Холокост, современные конфликты",lat:51.4966,lng:-0.1089,wiki:"https://en.wikipedia.org/wiki/Imperial_War_Museum",website:"https://www.iwm.org.uk"},
+  {city:"london",cat:"museum",name:"Sir John Soane's Museum",desc:"Дом архитектора XVIII века — зеркала, световые колодцы, пространственные иллюзии. Бесплатно",lat:51.5173,lng:-0.1186,wiki:"https://en.wikipedia.org/wiki/Sir_John_Soane%27s_Museum",website:"https://www.soane.org"},
+  {city:"london",cat:"museum",name:"Wellcome Collection",desc:"Искусство + наука + медицина. Провокационные выставки. Бесплатно",lat:51.5258,lng:-0.1339,wiki:"https://en.wikipedia.org/wiki/Wellcome_Collection",website:"https://wellcomecollection.org"},
+  {city:"london",cat:"museum",name:"Barbican Centre",desc:"Project a Black Planet + Liam Young: In Other Worlds. Лето 2026",lat:51.5202,lng:-0.0947,wiki:"https://en.wikipedia.org/wiki/Barbican_Centre",website:"https://www.barbican.org.uk"},
+  {city:"london",cat:"museum",name:"Science Museum",desc:"Интерактивный и впечатляющий. South Kensington",lat:51.4978,lng:-0.1745,wiki:"https://en.wikipedia.org/wiki/Science_Museum,_London",website:"https://www.sciencemuseum.org.uk"},
+  {city:"london",cat:"museum",name:"William Morris Gallery",desc:"Единственный музей Морриса. Обои, ткани, витражи, шрифты Arts & Crafts. Бесплатно",lat:51.5873,lng:-0.0218,wiki:"https://en.wikipedia.org/wiki/William_Morris_Gallery",website:"https://www.wmgallery.org.uk"},
+  {city:"london",cat:"museum",name:"Museum of the Home (Geffrye)",desc:"История домашнего интерьера от XVII века до наших дней. Hoxton. Бесплатно",lat:51.5292,lng:-0.0760,wiki:"https://en.wikipedia.org/wiki/Museum_of_the_Home",website:"https://www.museumofthehome.org.uk"},
+  {city:"london",cat:"museum",name:"Two Temple Place",desc:"Неоготический особняк Астора — резьба, витражи, бронзовые фонари. «Секретный дворец»",lat:51.5111,lng:-0.1130,wiki:"https://en.wikipedia.org/wiki/Two_Temple_Place",website:"https://twotempleplace.org"},
+  {city:"london",cat:"museum",name:"Fashion and Textile Museum",desc:"Ярко-оранжевый фасад, выставки моды и текстиля. Bermondsey. Осн. Zandra Rhodes",lat:51.5006,lng:-0.0814,wiki:"https://en.wikipedia.org/wiki/Fashion_and_Textile_Museum",website:"https://www.ftmlondon.org"},
+  {city:"london",cat:"museum",name:"Leighton House",desc:"Арабский зал с изразцами из Дамаска и Каира — ошеломительный интерьер. Holland Park",lat:51.5005,lng:-0.2057,wiki:"https://en.wikipedia.org/wiki/Leighton_House_Museum",website:"https://www.rbkc.gov.uk/subsites/museums/leightonhousemuseum"},
+  {city:"london",cat:"art",name:"Hayward Gallery",desc:"Anish Kapoor — крупнейшая ретроспектива. 16 июня — 18 октября",lat:51.5057,lng:-0.1135,wiki:"https://en.wikipedia.org/wiki/Hayward_Gallery",website:"https://www.southbankcentre.co.uk/venues/hayward-gallery"},
+  {city:"london",cat:"art",name:"Royal Academy",desc:"Richard Dadd — с 14 июля. RA Schools Show 12–28 июня (бесплатно)",lat:51.5094,lng:-0.1393,wiki:"https://en.wikipedia.org/wiki/Royal_Academy_of_Arts",website:"https://www.royalacademy.org.uk"},
+  {city:"london",cat:"art",name:"White Cube Bermondsey",desc:"Georg Baselitz: Back Again. 10 июня — 1 августа",lat:51.5001,lng:-0.0785,wiki:"https://en.wikipedia.org/wiki/White_Cube",website:"https://whitecube.com"},
+  {city:"london",cat:"art",name:"Kew Gardens",desc:"Henry Moore: Monumental Nature — скульптуры среди деревьев. До 27 сентября",lat:51.4787,lng:-0.2956,wiki:"https://en.wikipedia.org/wiki/Kew_Gardens",website:"https://www.kew.org"},
+  {city:"london",cat:"art",name:"British Library",desc:"Fairy Tales — выставка до 23 августа",lat:51.5298,lng:-0.1271,wiki:"https://en.wikipedia.org/wiki/British_Library",website:"https://www.bl.uk"},
+  {city:"london",cat:"art",name:"Saatchi Gallery",desc:"Современное искусство, всегда провокационно. Duke of York's HQ, Chelsea. Бесплатно",lat:51.4919,lng:-0.1602,wiki:"https://en.wikipedia.org/wiki/Saatchi_Gallery",website:"https://www.saatchigallery.com"},
+  {city:"london",cat:"art",name:"Photographer's Gallery",desc:"Единственная галерея в UK полностью посвящённая фотографии. Soho. Часто бесплатно",lat:51.5145,lng:-0.1330,wiki:"https://en.wikipedia.org/wiki/The_Photographers%27_Gallery",website:"https://thephotographersgallery.org.uk"},
+  {city:"london",cat:"art",name:"Newport Street Gallery",desc:"Галерея Damien Hirst в переделанных декорациях мастерских. Vauxhall. Бесплатно",lat:51.4857,lng:-0.1217,wiki:"https://en.wikipedia.org/wiki/Newport_Street_Gallery",website:"https://www.newportstreetgallery.com"},
+  {city:"london",cat:"art",name:"Whitechapel Gallery",desc:"Пионер contemporary art с 1901 года. Исторические выставки + новые имена. East End. Бесплатный вход",lat:51.5159,lng:-0.0717,wiki:"https://en.wikipedia.org/wiki/Whitechapel_Gallery",website:"https://www.whitechapelgallery.org"},
+  {city:"london",cat:"art",name:"Camden Art Centre",desc:"Contemporary art в тихом месте Hampstead. Бесплатно, малолюдно, качественные выставки",lat:51.5492,lng:-0.1773,wiki:"https://en.wikipedia.org/wiki/Camden_Arts_Centre",website:"https://camdenartcentre.org"},
+  {city:"london",cat:"art",name:"Gasworks",desc:"Альтернативное арт-пространство в South London. Экспериментальное искусство. Бесплатно",lat:51.4866,lng:-0.0946,website:"https://gasworks.org.uk"},
+  {city:"london",cat:"arch",name:"Tower of London",desc:"Норманнская крепость XI века, один из старейших замков Англии",lat:51.5081,lng:-0.0759,wiki:"https://en.wikipedia.org/wiki/Tower_of_London",website:"https://www.hrp.org.uk/tower-of-london"},
+  {city:"london",cat:"arch",name:"Westminster Abbey",desc:"Готический шедевр XIII века, место коронации британских монархов",lat:51.4994,lng:-0.1273,wiki:"https://en.wikipedia.org/wiki/Westminster_Abbey",website:"https://www.westminster-abbey.org"},
+  {city:"london",cat:"arch",name:"St Paul's Cathedral",desc:"Барочный купол Кристофера Рена — один из символов Лондона",lat:51.5138,lng:-0.0984,wiki:"https://en.wikipedia.org/wiki/St_Paul%27s_Cathedral",website:"https://www.stpauls.co.uk"},
+  {city:"london",cat:"arch",name:"Houses of Parliament",desc:"Неоготический комплекс XIX века на берегу Темзы. Биг-Бен",lat:51.4995,lng:-0.1248,wiki:"https://en.wikipedia.org/wiki/Palace_of_Westminster",website:"https://www.parliament.uk/visiting"},
+  {city:"london",cat:"arch",name:"The Shard",desc:"Самое высокое здание Западной Европы. Стеклянная пирамида с обзорной площадкой. Ренцо Пьяно, 2012",lat:51.5045,lng:-0.0865,wiki:"https://en.wikipedia.org/wiki/The_Shard",website:"https://www.the-shard.com"},
+  {city:"london",cat:"arch",name:"The Gherkin (30 St Mary Axe)",desc:"Культовая башня Нормана Фостера с параметрическим диагональным фасадом",lat:51.5144,lng:-0.0803,wiki:"https://en.wikipedia.org/wiki/30_St_Mary_Axe",website:"https://www.30stmaryaxe.com"},
+  {city:"london",cat:"arch",name:"Bloomberg HQ",desc:"Самое экологичное офисное здание в мире. Бронзовая ротонда, римский храм Митры в подвале. Foster + Partners, 2017",lat:51.5133,lng:-0.0882,wiki:"https://en.wikipedia.org/wiki/Bloomberg_London",website:"https://www.bloomberg.com/company/london-building"},
+  {city:"london",cat:"arch",name:"Coal Drops Yard",desc:"Два викторианских угольных склада, соединённых «поцелуем» крыш. Heatherwick Studio, King's Cross",lat:51.5362,lng:-0.1236,wiki:"https://en.wikipedia.org/wiki/Coal_Drops_Yard",website:"https://www.coaldropsyard.com"},
+  {city:"london",cat:"arch",name:"Battersea Power Station",desc:"Легендарная электростанция с обложки Pink Floyd → жилой и торговый комплекс. Арт-деко, реконструкция 2022",lat:51.4816,lng:-0.1441,wiki:"https://en.wikipedia.org/wiki/Battersea_Power_Station",website:"https://batterseapowerstation.co.uk"},
+  {city:"london",cat:"arch",name:"Design Museum",desc:"Параболическая крыша и чистые линии. Минимализм Джона Поусона. Кенсингтон",lat:51.5003,lng:-0.2003,wiki:"https://en.wikipedia.org/wiki/Design_Museum",website:"https://designmuseum.org"},
+  {city:"london",cat:"arch",name:"National Theatre",desc:"Бетонные террасы Ласдана — «городской пейзаж» у Темзы. Брутализм, 1976",lat:51.5072,lng:-0.1148,wiki:"https://en.wikipedia.org/wiki/Royal_National_Theatre",website:"https://www.nationaltheatre.org.uk"},
+  {city:"london",cat:"arch",name:"Balfron Tower",desc:"Бруталистская жилая башня Голдфингера. Сестра знаменитой Trellick Tower. Poplar, 1967",lat:51.5148,lng:0.0094,wiki:"https://en.wikipedia.org/wiki/Balfron_Tower"},
+  {city:"london",cat:"arch",name:"London Aquatics Centre",desc:"Волнообразная крыша, парящая над бассейнами. Заха Хадид, Олимпиада 2012. Queen Elizabeth Olympic Park",lat:51.5383,lng:-0.0158,wiki:"https://en.wikipedia.org/wiki/London_Aquatics_Centre",website:"https://www.londonaquaticscentre.org"},
+  {city:"london",cat:"arch",name:"Serpentine Sackler Gallery",desc:"«Пузырь» из стекловолокна, пристроенный к пороховому складу XIX века. Заха Хадид, 2013",lat:51.5056,lng:-0.1748,wiki:"https://en.wikipedia.org/wiki/Serpentine_Galleries",website:"https://www.serpentinegalleries.org"},
+  {city:"london",cat:"arch",name:"Roca London Gallery",desc:"Интерьер имитирует течение воды — текучие белые формы. Заха Хадид. Chelsea",lat:51.4857,lng:-0.1746,website:"https://www.rocalondongallery.com"},
+  {city:"london",cat:"design_shop",name:"Liberty London",desc:"Фахверковое тюдоровское здание. Культовые принты, интерьеры из корабельного дуба. Soho",lat:51.5135,lng:-0.1403,wiki:"https://en.wikipedia.org/wiki/Liberty_(department_store)",website:"https://www.libertylondon.com"},
+  {city:"london",cat:"design_shop",name:"Aram Store",desc:"Старейший дилер дизайнерской мебели. Стулья Эйлин Грей, Ле Корбюзье, Бройера. Covent Garden",lat:51.5130,lng:-0.1232,website:"https://www.aram.co.uk"},
+  {city:"london",cat:"design_shop",name:"The Conran Shop",desc:"Наследие Теренса Конрана. Мебель, освещение, посуда. Sloane Square / Marylebone",lat:51.4907,lng:-0.1599,wiki:"https://en.wikipedia.org/wiki/The_Conran_Shop",website:"https://www.conranshop.co.uk"},
+  {city:"london",cat:"design_shop",name:"Vitra Tramshed (Clerkenwell)",desc:"Шоурум Vitra в бывшем трамвайном депо. Стулья Имзов, Пантона, Проуве",lat:51.5240,lng:-0.1037,website:"https://www.vitra.com/en-gb/showrooms"},
+  {city:"london",cat:"design_shop",name:"SCP",desc:"Британская мебель: Мэтью Хилтон, Майкл Анастасиадес, Илзе Кроуфорд. Curtain Road, Shoreditch",lat:51.5248,lng:-0.0795,website:"https://www.scp.co.uk"},
+  {city:"london",cat:"design_shop",name:"Labour and Wait",desc:"Хозяйственные товары, возведённые в ранг искусства: эмаль, щётки, холст. Redchurch St, Shoreditch",lat:51.5234,lng:-0.0748,website:"https://www.labourandwait.co.uk"},
+  {city:"london",cat:"design_shop",name:"HAY",desc:"Датский дизайн по доступным ценам. Мебель, канцелярия, посуда. Covent Garden",lat:51.5127,lng:-0.1228,wiki:"https://en.wikipedia.org/wiki/HAY_(company)",website:"https://hay.com"},
+  {city:"london",cat:"design_shop",name:"Darkroom",desc:"Кураторский магазин: графический дизайн, текстиль, украшения, книги. Lamb's Conduit St",lat:51.5205,lng:-0.1181,website:"https://www.darkroomlondon.com"},
+  {city:"london",cat:"design_shop",name:"Pentreath & Hall",desc:"Магазин архитектора Бена Пентрита. Обои, керамика, мелочи для дома. Rugby St, Bloomsbury",lat:51.5210,lng:-0.1190,website:"https://www.pentreath-hall.com"},
+  {city:"london",cat:"design_shop",name:"St Bride Foundation (Type Archive)",desc:"Коллекция шрифтовых матриц, наборных касс и печатных станков. Fleet Street",lat:51.5141,lng:-0.1052,website:"https://sbf.org.uk"},
+  {city:"london",cat:"market",name:"Portobello Road Market",desc:"Крупнейший антикварный рынок Великобритании. Суббота — главный день",lat:51.5168,lng:-0.2046,wiki:"https://en.wikipedia.org/wiki/Portobello_Road_Market",website:"https://www.portobelloroad.co.uk"},
+  {city:"london",cat:"market",name:"Brick Lane Markets",desc:"5 рынков в одном. Воскресенье. Shoreditch",lat:51.5225,lng:-0.0717,wiki:"https://en.wikipedia.org/wiki/Brick_Lane",website:"https://www.bricklanemarkets.co.uk"},
+  {city:"london",cat:"market",name:"Spitalfields Market",desc:"Под крышей, викторианское здание. Четверг — лучший день для винтажа",lat:51.5196,lng:-0.0749,wiki:"https://en.wikipedia.org/wiki/Old_Spitalfields_Market",website:"https://oldspitalfieldsmarket.com"},
+  {city:"london",cat:"market",name:"Broadway Market",desc:"Суббота, Hackney — еда, винил, книги, кофе. Не туристический",lat:51.5413,lng:-0.0563,wiki:"https://en.wikipedia.org/wiki/Broadway_Market,_London",website:"https://broadwaymarket.co.uk"},
+  {city:"london",cat:"market",name:"Maltby Street Market",desc:"Суббота утром, Bermondsey — гастро-рынок под железной дорогой",lat:51.5012,lng:-0.0795,website:"https://www.maltby.st"},
+  {city:"london",cat:"nature",name:"Hampstead Heath",desc:"320 га дикой природы. Плавание в прудах, вид на весь Лондон с Parliament Hill",lat:51.5608,lng:-0.1577,wiki:"https://en.wikipedia.org/wiki/Hampstead_Heath",website:"https://www.cityoflondon.gov.uk/hampstead"},
+  {city:"london",cat:"nature",name:"Richmond Park",desc:"1000 га, олени бродят свободно. Самый большой королевский парк",lat:51.4408,lng:-0.2812,wiki:"https://en.wikipedia.org/wiki/Richmond_Park",website:"https://www.royalparks.org.uk/parks/richmond-park"},
+  {city:"london",cat:"nature",name:"Regent's Park",desc:"Розовый сад (июнь–июль — пик цветения), театр под открытым небом",lat:51.5313,lng:-0.1536,wiki:"https://en.wikipedia.org/wiki/Regent%27s_Park",website:"https://www.royalparks.org.uk/parks/the-regents-park"},
+  {city:"london",cat:"nature",name:"Highgate Cemetery",desc:"Готическое викторианское кладбище. Могила Маркса",lat:51.5683,lng:-0.1457,wiki:"https://en.wikipedia.org/wiki/Highgate_Cemetery",website:"https://highgatecemetery.org"},
+  {city:"london",cat:"nature",name:"Holland Park",desc:"Японский сад Kyoto Garden, павлины, оранжерея. Kensington. Тихий оазис",lat:51.5021,lng:-0.2027,wiki:"https://en.wikipedia.org/wiki/Holland_Park",website:"https://www.rbkc.gov.uk/leisure-and-culture/parks/holland-park"},
+  {city:"london",cat:"nature",name:"Greenwich Park",desc:"Королевский парк с обсерваторией, нулевым меридианом, видами на Темзу и Canary Wharf",lat:51.4769,lng:-0.0005,wiki:"https://en.wikipedia.org/wiki/Greenwich_Park",website:"https://www.royalparks.org.uk/parks/greenwich-park"},
+  {city:"london",cat:"nature",name:"Victoria Park",desc:"«Народный парк» East End с 1845. Озёра, пагода, летние фестивали. Hackney",lat:51.5363,lng:-0.0381,wiki:"https://en.wikipedia.org/wiki/Victoria_Park,_London"},
+  {city:"london",cat:"nature",name:"Battersea Park",desc:"Парк у Темзы с субтропическим садом, Peace Pagoda, озером с лодками",lat:51.4816,lng:-0.1562,wiki:"https://en.wikipedia.org/wiki/Battersea_Park"},
+  {city:"london",cat:"nature",name:"Epping Forest",desc:"Древний лес 2400 га на границе Лондона. Олени, пруды, вековые деревья. Побег из города",lat:51.6462,lng:0.0550,wiki:"https://en.wikipedia.org/wiki/Epping_Forest",website:"https://www.cityoflondon.gov.uk/things-to-do/green-spaces/epping-forest"},
+  {city:"london",cat:"district",name:"Clerkenwell",desc:"Негласная столица дизайна. Шоурумы Vitra, Fritz Hansen, Kvadrat. В мае — Clerkenwell Design Week",lat:51.5240,lng:-0.1050,wiki:"https://en.wikipedia.org/wiki/Clerkenwell"},
+  {city:"london",cat:"district",name:"Shoreditch & Brick Lane",desc:"Стрит-арт, мультикультурность. SCP, Labour and Wait, Aesop, галереи, ночная жизнь",lat:51.5224,lng:-0.0735,wiki:"https://en.wikipedia.org/wiki/Shoreditch"},
+  {city:"london",cat:"district",name:"Southbank",desc:"Культурная набережная: Tate Modern → National Theatre → BFI → Hayward Gallery",lat:51.5054,lng:-0.1047,wiki:"https://en.wikipedia.org/wiki/South_Bank"},
+  {city:"london",cat:"district",name:"Soho",desc:"Энергия, бары, театры, ЛГБТ-район",lat:51.5130,lng:-0.1358,wiki:"https://en.wikipedia.org/wiki/Soho"},
+  {city:"london",cat:"district",name:"Notting Hill",desc:"Цветные дома, Portobello Road. Рынок (суббота), кафе, книжные",lat:51.5127,lng:-0.2039,wiki:"https://en.wikipedia.org/wiki/Notting_Hill"},
+  {city:"london",cat:"district",name:"Camden",desc:"Панк, альтернатива. Рынок, каналы, живая музыка",lat:51.5390,lng:-0.1426,wiki:"https://en.wikipedia.org/wiki/Camden_Town"},
+  {city:"london",cat:"district",name:"Bermondsey / SE1",desc:"Fashion and Textile Museum, White Cube, Maltby Street Market, склады-галереи",lat:51.5001,lng:-0.0850,wiki:"https://en.wikipedia.org/wiki/Bermondsey"},
+  {city:"london",cat:"district",name:"Lamb's Conduit Street",desc:"Darkroom, Pentreath & Hall, Folk, Persephone Books. Без сетевых брендов",lat:51.5205,lng:-0.1185},
+  {city:"london",cat:"daytrip",name:"Bath",desc:"1ч 20 мин поездом. Римские бани, Georgian архитектура, Thermae Bath Spa",lat:51.3811,lng:-2.3590,wiki:"https://en.wikipedia.org/wiki/Bath,_Somerset",website:"https://visitbath.co.uk"},
+  {city:"london",cat:"daytrip",name:"Brighton",desc:"1 час поездом. Пирс, стрит-арт, The Lanes (винтаж!), Royal Pavilion",lat:50.8225,lng:-0.1372,wiki:"https://en.wikipedia.org/wiki/Brighton",website:"https://www.visitbrighton.com"},
+  {city:"london",cat:"daytrip",name:"Cambridge",desc:"50 мин поездом. Колледжи, Fitzwilliam Museum, пантинг по реке Кем",lat:52.2053,lng:0.1218,wiki:"https://en.wikipedia.org/wiki/Cambridge",website:"https://www.visitcambridge.org"},
+  {city:"london",cat:"daytrip",name:"Oxford",desc:"1 час поездом. Бодлианская библиотека, Ashmolean Museum, колледжи",lat:51.7520,lng:-1.2577,wiki:"https://en.wikipedia.org/wiki/Oxford",website:"https://www.experienceoxfordshire.org"},
+  {city:"london",cat:"daytrip",name:"Windsor",desc:"30 мин поездом. Крупнейший обитаемый замок в мире",lat:51.4839,lng:-0.6044,wiki:"https://en.wikipedia.org/wiki/Windsor_Castle",website:"https://www.rct.uk/visit/windsor-castle"},
+  {city:"london",cat:"daytrip",name:"Whitstable",desc:"1ч 10 мин. Устрицы, рыба, пляж, независимые магазины",lat:51.3617,lng:1.0261,wiki:"https://en.wikipedia.org/wiki/Whitstable"},
+  {city:"london",cat:"daytrip",name:"Cotswolds",desc:"~2 часа. Медовые каменные деревни: Bourton-on-the-Water, Bibury",lat:51.8333,lng:-1.7000,wiki:"https://en.wikipedia.org/wiki/Cotswolds",website:"https://www.cotswolds.com"},
+  /* ── LONDON · RESTAURANTS ── */
+  {city:"london",cat:"restaurant",name:"Dishoom",desc:"Культовый индийский ресторан в стиле бомбейских кафе. Легендарный завтрак. Несколько локаций",lat:51.5147,lng:-0.1246,wiki:"https://en.wikipedia.org/wiki/Dishoom",website:"https://www.dishoom.com"},
+  {city:"london",cat:"restaurant",name:"Sketch",desc:"Розовый зал для afternoon tea — одно из самых инстаграмных мест Лондона. Mayfair",lat:51.5147,lng:-0.1413,wiki:"https://en.wikipedia.org/wiki/Sketch_(restaurant)",website:"https://sketch.london"},
+  {city:"london",cat:"restaurant",name:"Borough Market",desc:"Легендарный фуд-маркет с 1756 года. Устрицы, сыры, стрит-фуд. Четверг–суббота",lat:51.5055,lng:-0.0909,wiki:"https://en.wikipedia.org/wiki/Borough_Market",website:"https://boroughmarket.org.uk"},
+  {city:"london",cat:"restaurant",name:"Bao",desc:"Тайваньские паровые булочки — культ Soho. Всегда очередь, но оно того стоит",lat:51.5134,lng:-0.1316,website:"https://baolondon.com"},
+  {city:"london",cat:"restaurant",name:"Padella",desc:"Свежая паста по £6–12. Легенда Borough Market. Приходите к открытию — очереди огромные",lat:51.5056,lng:-0.0901,website:"https://www.padella.co"},
+  {city:"london",cat:"restaurant",name:"Hoppers",desc:"Шри-ланкийская кухня: hoppers, kothu roti, карри. Soho. Без резерваций — приходите рано",lat:51.5135,lng:-0.1324,website:"https://www.hopperslondon.com"},
+  {city:"london",cat:"restaurant",name:"The Wolseley",desc:"Grand café на Piccadilly. Классика для завтрака или afternoon tea. Венская атмосфера",lat:51.5086,lng:-0.1396,wiki:"https://en.wikipedia.org/wiki/The_Wolseley",website:"https://www.thewolseley.com"},
+  {city:"london",cat:"restaurant",name:"St. John",desc:"Революция nose-to-tail eating. Британская кухня без прикрас. Костный мозг с петрушкой — культ. Farringdon",lat:51.5206,lng:-0.1027,wiki:"https://en.wikipedia.org/wiki/St._John_(restaurant)",website:"https://www.stjohnrestaurant.com"},
+  {city:"london",cat:"restaurant",name:"Flat Iron",desc:"Лучший стейк за £12. Несколько локаций. Без резерваций",lat:51.5142,lng:-0.1273,website:"https://flatironsteak.co.uk"},
+  {city:"london",cat:"restaurant",name:"Rochelle Canteen",desc:"Скрытое место во дворе школы искусств. Где обедают шоредичские дизайнеры. Простая сезонная еда",lat:51.5268,lng:-0.0773,website:"https://www.arnoldandhenderson.com/rochelle-canteen"},
+  {city:"london",cat:"restaurant",name:"E Pellicci",desc:"Итальянское семейное кафе с 1900 года. Интерьер арт-деко. Легенда East End. Bethnal Green",lat:51.5273,lng:-0.0563,wiki:"https://en.wikipedia.org/wiki/E_Pellicci"},
+  {city:"london",cat:"restaurant",name:"Regency Café",desc:"Британский greasy spoon — яйца, бекон, чай в кружках. Интерьер с 1946 года. Аутентично. Westminster",lat:51.4939,lng:-0.1335,website:"https://www.regencycafe.co.uk"},
+  {city:"london",cat:"restaurant",name:"Ottolenghi",desc:"Средиземноморская кухня, салаты, выпечка. Несколько локаций. Красивая еда",lat:51.5373,lng:-0.1425,wiki:"https://en.wikipedia.org/wiki/Yotam_Ottolenghi",website:"https://ottolenghi.co.uk"},
+  {city:"london",cat:"restaurant",name:"Kiln",desc:"Тайская кухня на открытом огне. Soho. Без резерваций, сидячие места у барной стойки",lat:51.5136,lng:-0.1318,website:"https://kilnsoho.com"},
+  {city:"london",cat:"restaurant",name:"The Ivy",desc:"Театральная классика с 1917 года. Pre-theatre menu. Covent Garden. Резервировать заранее",lat:51.5122,lng:-0.1246,wiki:"https://en.wikipedia.org/wiki/The_Ivy",website:"https://www.the-ivy.co.uk"},
+  {city:"london",cat:"restaurant",name:"Beigel Bake",desc:"24/7 бейглы с 1974 года. Солонина с горчицей за £5. Культ Brick Lane. Всегда открыто",lat:51.5199,lng:-0.0710,wiki:"https://en.wikipedia.org/wiki/Beigel_Bake"},
+  {city:"london",cat:"restaurant",name:"Honey & Co",desc:"Ближневосточная кухня. Крошечное место с огромной репутацией. Warren Street. Резервировать!",lat:51.5249,lng:-0.1380,website:"https://honeyandco.co.uk"},
+  {city:"london",cat:"restaurant",name:"Barrafina",desc:"Испанские тапас у барной стойки. Без резерваций. Несколько локаций. Adelaide Street, Soho",lat:51.5104,lng:-0.1241,website:"https://www.barrafina.co.uk"},
+  {city:"london",cat:"restaurant",name:"Gymkhana",desc:"Индийская кухня высокого уровня. Michelin star. Колониальный декор. Mayfair. Дорого",lat:51.5095,lng:-0.1433,website:"https://www.gymkhaналondon.com"},
+  {city:"london",cat:"restaurant",name:"Smoking Goat",desc:"Тайская кухня на углях. Shoreditch. Шумно, весело, остро. Без резерваций",lat:51.5247,lng:-0.0811,website:"https://smokinggoatbar.com"},
+  {city:"london",cat:"restaurant",name:"Gloria",desc:"Итальянский ресторан-вечеринка. Shoreditch. Диско-шар, aperol spritz, весёлая атмосфера",lat:51.5242,lng:-0.0815,website:"https://www.bigmammagroup.com/en/trattorias/gloria"},
+  {city:"london",cat:"restaurant",name:"Tayyabs",desc:"Пакистанский ресторан. Огромные порции, дёшево (£10–15). Whitechapel. Всегда очередь!",lat:51.5161,lng:-0.0630,website:"https://www.tayyabs.co.uk"},
+  {city:"london",cat:"restaurant",name:"Poppies Fish & Chips",desc:"Классический fish & chips в ретро-интерьере 1950-х. Spitalfields. Туристично но вкусно",lat:51.5196,lng:-0.0743,website:"https://www.poppiesfishandchips.co.uk"},
+  {city:"london",cat:"restaurant",name:"M. Manze",desc:"Pie & mash с 1902 года. Традиционный рабочий класс Лондона. Tower Bridge Road",lat:51.4993,lng:-0.0770,wiki:"https://en.wikipedia.org/wiki/M._Manze"},
+  {city:"london",cat:"restaurant",name:"Lyle's",desc:"Британская contemporary кухня. Michelin star. Shoreditch. Минималистичный интерьер",lat:51.5227,lng:-0.0775,website:"https://www.lyleslondon.com"},
+  {city:"london",cat:"restaurant",name:"The River Café",desc:"Легендарный итальянский ресторан с 1987. Hammersmith. Дорого, но это опыт. Резервировать за месяц",lat:51.4879,lng:-0.2262,wiki:"https://en.wikipedia.org/wiki/River_Café_(London)",website:"https://www.rivercafe.co.uk"},
+  {city:"london",cat:"restaurant",name:"Coal Office",desc:"Ресторан от дизайнера Tom Dixon в угольном складе King's Cross. Ближневосточная кухня, эффектный интерьер",lat:51.5355,lng:-0.1241,website:"https://coaloffice.co.uk"},
+  /* ── LONDON · SHOPPING ── */
+  {city:"london",cat:"shopping",name:"Primark (Oxford Street)",desc:"Супер-бюджетная одежда. Огромный флагман на 5 этажей. Всегда многолюдно",lat:51.5156,lng:-0.1419,website:"https://www.primark.com"},
+  {city:"london",cat:"shopping",name:"TK Maxx",desc:"Дискаунт брендовой одежды до -60%. Несколько локаций: Kensington High St, Oxford St, Covent Garden",lat:51.4994,lng:-0.1918,website:"https://www.tkmaxx.com"},
+  {city:"london",cat:"shopping",name:"Beyond Retro",desc:"Огромный винтажный магазин. Тонны одежды по £10–30. Cheshire Street (Shoreditch) — самый большой",lat:51.5216,lng:-0.0698,website:"https://www.beyondretro.com"},
+  {city:"london",cat:"shopping",name:"COS",desc:"Минималистичная одежда (сестра H&M). Качество выше, цены адекватные. Regent Street",lat:51.5136,lng:-0.1394,website:"https://www.cosstores.com"},
+  {city:"london",cat:"shopping",name:"& Other Stories",desc:"Скандинавский дизайн по доступным ценам. Одежда, обувь, косметика. Regent Street",lat:51.5125,lng:-0.1386,website:"https://www.stories.com"},
+  {city:"london",cat:"shopping",name:"Uniqlo",desc:"Японский бренд, качественный базовый гардероб. Oxford Street — огромный флагман",lat:51.5154,lng:-0.1410,website:"https://www.uniqlo.com/uk"},
+  {city:"london",cat:"shopping",name:"Oxfam Boutique",desc:"Charity shop с отобранным винтажом. Несколько локаций: Marylebone, Notting Hill. Доходы — на благотворительность",lat:51.5209,lng:-0.1550,website:"https://www.oxfam.org.uk/shop"},
+  {city:"london",cat:"shopping",name:"Monki",desc:"Шведский бренд (сестра Weekday). Яркая одежда по £20–50. Carnaby Street, Covent Garden",lat:51.5135,lng:-0.1369,website:"https://www.monki.com"},
+  /* ── LONDON · ATTRACTIONS ── */
+  {city:"london",cat:"attraction",name:"Sky Garden",desc:"Бесплатная обзорная площадка на 35 этаже (155м). Сад в небе. Бронировать за 3 дня на сайте!",lat:51.5111,lng:-0.0834,wiki:"https://en.wikipedia.org/wiki/20_Fenchurch_Street",website:"https://skygarden.london"},
+  {city:"london",cat:"attraction",name:"Churchill War Rooms",desc:"Военный бункер Черчилля времён WWII. Подлинные интерьеры, музей",lat:51.5022,lng:-0.1297,wiki:"https://en.wikipedia.org/wiki/Churchill_War_Rooms",website:"https://www.iwm.org.uk/visits/churchill-war-rooms"},
+  {city:"london",cat:"attraction",name:"Leadenhall Market",desc:"Викторианский крытый рынок 1881 года. Снимался как Diagon Alley в Гарри Поттере",lat:51.5133,lng:-0.0832,wiki:"https://en.wikipedia.org/wiki/Leadenhall_Market",website:"https://www.leadenhallmarket.co.uk"},
+  {city:"london",cat:"attraction",name:"Columbia Road Flower Market",desc:"Воскресенье 8:00–15:00. Цветочный рынок + винтажные магазины вокруг. Shoreditch",lat:51.5311,lng:-0.0678,wiki:"https://en.wikipedia.org/wiki/Columbia_Road_Flower_Market"},
+  {city:"london",cat:"attraction",name:"God's Own Junkyard",desc:"Склад неоновых вывесок. Розовые фламинго, ретро-реклама, кинореквизит. Walthamstow. Только выходные!",lat:51.5868,lng:-0.0217,website:"https://www.godsownjunkyard.co.uk"},
+  {city:"london",cat:"attraction",name:"Little Venice",desc:"Каналы с плавучими домами, café-лодки. Прогулка до Camden по Regent's Canal",lat:51.5223,lng:-0.1819,wiki:"https://en.wikipedia.org/wiki/Little_Venice,_London"},
+  {city:"london",cat:"attraction",name:"Primrose Hill",desc:"Холм с лучшим видом на Лондон (без толп туристов). Закаты. Рядом с Camden и Regent's Park",lat:51.5417,lng:-0.1645,wiki:"https://en.wikipedia.org/wiki/Primrose_Hill"},
+  {city:"london",cat:"attraction",name:"Covent Garden",desc:"Площадь с уличными артистами, театрами, магазинами, рынком. Apple Market по выходным",lat:51.5118,lng:-0.1227,wiki:"https://en.wikipedia.org/wiki/Covent_Garden",website:"https://www.coventgarden.london"},
+  {city:"london",cat:"attraction",name:"Chinatown",desc:"Китайский квартал, красные фонари, димсам, пекинская утка. Gerrard Street. Soho",lat:51.5113,lng:-0.1313,wiki:"https://en.wikipedia.org/wiki/Chinatown,_London"},
+  {city:"london",cat:"attraction",name:"Neal's Yard",desc:"Скрытый цветной дворик в Covent Garden. Кафе, сырная лавка, wholefood магазины",lat:51.5145,lng:-0.1265,wiki:"https://en.wikipedia.org/wiki/Neal%27s_Yard"},
+  {city:"edinburgh",cat:"festival",name:"Edinburgh Fringe (превью)",desc:"Fringe начинается 7 августа — превью могут появиться в конце июля",lat:55.9497,lng:-3.1883,wiki:"https://en.wikipedia.org/wiki/Edinburgh_Festival_Fringe",website:"https://www.edfringe.com"},
+  {city:"edinburgh",cat:"music",name:"Edinburgh Jazz & Blues Festival",desc:"17–26 июля — джаз, блюз, соул, фанк на десятках площадок. Прямо в ваши даты!",lat:55.9510,lng:-3.1910,wiki:"https://en.wikipedia.org/wiki/Edinburgh_Jazz_and_Blues_Festival",website:"https://edinburghjazzfestival.com"},
+  {city:"edinburgh",cat:"music",name:"Sneaky Pete's",desc:"Легендарный клуб — электроника, инди. Ежедневно",lat:55.9472,lng:-3.1887,website:"https://www.sneakypetes.co.uk"},
+  {city:"edinburgh",cat:"music",name:"The Bongo Club",desc:"Эклектичная программа от кабаре до электроники. Ежедневно",lat:55.9503,lng:-3.1825,website:"https://thebongoclub.co.uk"},
+  {city:"edinburgh",cat:"music",name:"Cabaret Voltaire",desc:"Подземный клуб в историческом подвале. Ежедневно",lat:55.9490,lng:-3.1884,website:"https://www.thecabaretvoltaire.com"},
+  {city:"edinburgh",cat:"music",name:"Sandy Bell's",desc:"Живая фолк-музыка каждый вечер с 1942 года",lat:55.9452,lng:-3.1915,wiki:"https://en.wikipedia.org/wiki/Sandy_Bell%27s"},
+  {city:"edinburgh",cat:"museum",name:"National Museum of Scotland",desc:"Огромная коллекция от геологии до дизайна. Бесплатно. Крыша с видом на замок",lat:55.9467,lng:-3.1924,wiki:"https://en.wikipedia.org/wiki/National_Museum_of_Scotland",website:"https://www.nms.ac.uk"},
+  {city:"edinburgh",cat:"museum",name:"Scottish National Gallery",desc:"Рафаэль, Тициан, Пуссен + шотландские мастера. Бесплатно",lat:55.9508,lng:-3.1960,wiki:"https://en.wikipedia.org/wiki/Scottish_National_Gallery",website:"https://www.nationalgalleries.org"},
+  {city:"edinburgh",cat:"museum",name:"Scottish Nat. Gallery of Modern Art",desc:"Сюрреализм, поп-арт, современные инсталляции. Два здания в парке",lat:55.9494,lng:-3.2227,wiki:"https://en.wikipedia.org/wiki/Scottish_National_Gallery_of_Modern_Art",website:"https://www.nationalgalleries.org/visit/scottish-national-gallery-modern-art"},
+  {city:"edinburgh",cat:"museum",name:"Surgeons' Hall Museums",desc:"Жуткий и завораживающий музей хирургии и анатомии",lat:55.9438,lng:-3.1832,wiki:"https://en.wikipedia.org/wiki/Surgeons%27_Hall",website:"https://museum.rcsed.ac.uk"},
+  {city:"edinburgh",cat:"museum",name:"Writers' Museum",desc:"Бёрнс, Скотт, Стивенсон — дом XVII века. Бесплатно",lat:55.9499,lng:-3.1931,wiki:"https://en.wikipedia.org/wiki/Writers%27_Museum",website:"https://www.edinburghmuseums.org.uk"},
+  {city:"edinburgh",cat:"museum",name:"Summerhall",desc:"Бывший ветеринарный колледж — искусство, театр, пивоварня",lat:55.9405,lng:-3.1811,website:"https://www.summerhall.co.uk"},
+  {city:"edinburgh",cat:"art",name:"City Art Centre",desc:"Jean F. Watson: An Artistic Legacy. До 4 октября",lat:55.9518,lng:-3.1873,wiki:"https://en.wikipedia.org/wiki/City_Art_Centre",website:"https://www.edinburghmuseums.org.uk/venue/city-art-centre"},
+  {city:"edinburgh",cat:"art",name:"Jupiter Artland",desc:"Парк скульптур, 30 мин от центра. Антони Гормли, Корнелия Паркер. Июнь–сентябрь",lat:55.9017,lng:-3.3775,wiki:"https://en.wikipedia.org/wiki/Jupiter_Artland",website:"https://www.jupiterartland.org"},
+  {city:"edinburgh",cat:"art",name:"Fruitmarket Gallery",desc:"Современное искусство. Бывший фруктовый рынок, новое крыло из грубого бетона. Бесплатно",lat:55.9519,lng:-3.1856,wiki:"https://en.wikipedia.org/wiki/Fruitmarket_Gallery",website:"https://www.fruitmarket.co.uk"},
+  {city:"edinburgh",cat:"art",name:"Collective (Calton Hill)",desc:"Галерея в бывшей обсерватории. Вид на весь город",lat:55.9552,lng:-3.1769,website:"https://www.collectivegallery.net"},
+  {city:"edinburgh",cat:"arch",name:"Edinburgh Castle",desc:"Крепость на вулканической скале. Архитектурные слои от XII до XIX века",lat:55.9486,lng:-3.1999,wiki:"https://en.wikipedia.org/wiki/Edinburgh_Castle",website:"https://www.edinburghcastle.scot"},
+  {city:"edinburgh",cat:"arch",name:"St Giles' Cathedral",desc:"Готический собор XV века с знаменитой «короной» на шпиле. Royal Mile",lat:55.9490,lng:-3.1920,wiki:"https://en.wikipedia.org/wiki/St_Giles%27_Cathedral",website:"https://www.stgilescathedral.org.uk"},
+  {city:"edinburgh",cat:"arch",name:"Scottish Parliament",desc:"Деконструктивизм, вдохновлённый шотландским пейзажем — перевёрнутые лодки, листья, скалы. Энрик Мираллес",lat:55.9524,lng:-3.1754,wiki:"https://en.wikipedia.org/wiki/Scottish_Parliament_Building",website:"https://www.parliament.scot"},
+  {city:"edinburgh",cat:"arch",name:"Rosslyn Chapel",desc:"Позднеготическая резьба XV века невероятной плотности. 20 мин от центра (из «Кода Да Винчи»)",lat:55.8554,lng:-3.1602,wiki:"https://en.wikipedia.org/wiki/Rosslyn_Chapel",website:"https://www.rosslynchapel.com"},
+  {city:"edinburgh",cat:"design_shop",name:"Edinburgh Printmakers",desc:"Крупнейшая открытая мастерская печатной графики в Европе. Castle Mills, Fountainbridge",lat:55.9425,lng:-3.2100,website:"https://edinburgh-printmakers.co.uk"},
+  {city:"edinburgh",cat:"design_shop",name:"Dovecot Studios",desc:"Ткацкая мастерская гобеленов в переоборудованных викторианских банях. С 1912 года",lat:55.9455,lng:-3.1883,wiki:"https://en.wikipedia.org/wiki/Dovecot_Studios",website:"https://dovecotstudios.com"},
+  {city:"edinburgh",cat:"design_shop",name:"Scottish Design Exchange",desc:"Маркетплейс шотландских дизайнеров: ювелирка, керамика, текстиль. Ocean Terminal, Leith",lat:55.9750,lng:-3.1766,website:"https://www.scottishdesignexchange.com"},
+  {city:"edinburgh",cat:"market",name:"Grassmarket",desc:"Винтажные магазины под Замком. Armstrong's Vintage — с 1840 года",lat:55.9472,lng:-3.1952,wiki:"https://en.wikipedia.org/wiki/Grassmarket"},
+  {city:"edinburgh",cat:"market",name:"Stockbridge Market",desc:"Воскресенье — фермерский + крафт-рынок",lat:55.9568,lng:-3.2073,website:"https://www.stockbridgemarket.com"},
+  {city:"edinburgh",cat:"market",name:"Backbeat Records",desc:"Винил, винил, винил. E Crosscauseway",lat:55.9429,lng:-3.1828},
+  {city:"edinburgh",cat:"nature",name:"Arthur's Seat",desc:"Древний вулкан. 251 м, 45 мин подъём. Панорама 360°",lat:55.9445,lng:-3.1615,wiki:"https://en.wikipedia.org/wiki/Arthur%27s_Seat"},
+  {city:"edinburgh",cat:"nature",name:"Calton Hill",desc:"Закаты, недостроенный «Парфенон», обсерватория",lat:55.9552,lng:-3.1769,wiki:"https://en.wikipedia.org/wiki/Calton_Hill"},
+  {city:"edinburgh",cat:"nature",name:"Portobello Beach",desc:"Песчаный пляж с викторианскими домами. 20 мин на автобусе",lat:55.9500,lng:-3.1127,wiki:"https://en.wikipedia.org/wiki/Portobello,_Edinburgh"},
+  {city:"edinburgh",cat:"nature",name:"Pentland Hills",desc:"Дикие холмы с овцами — полудневной хайк. 30 мин от центра",lat:55.8600,lng:-3.2350,wiki:"https://en.wikipedia.org/wiki/Pentland_Hills"},
+  {city:"edinburgh",cat:"district",name:"Old Town",desc:"Средневековые переулки, замок. Попросите карту «closes and courtyards»",lat:55.9497,lng:-3.1894,wiki:"https://en.wikipedia.org/wiki/Old_Town,_Edinburgh"},
+  {city:"edinburgh",cat:"district",name:"New Town",desc:"Георгианская архитектура, галереи. UNESCO всемирное наследие",lat:55.9553,lng:-3.2002,wiki:"https://en.wikipedia.org/wiki/New_Town,_Edinburgh"},
+  {city:"edinburgh",cat:"district",name:"Stockbridge",desc:"Деревенская атмосфера, ботанический сад, воскресный рынок, антикварные магазины",lat:55.9573,lng:-3.2138,wiki:"https://en.wikipedia.org/wiki/Stockbridge,_Edinburgh"},
+  {city:"edinburgh",cat:"district",name:"Dean Village",desc:"Тайная средневековая деревня у реки — самое фотогеничное место в городе",lat:55.9517,lng:-3.2158,wiki:"https://en.wikipedia.org/wiki/Dean_Village"},
+  {city:"edinburgh",cat:"district",name:"Leith",desc:"Портовый квартал. Крафтовые студии, рестораны, галереи. Warehouse-эстетика",lat:55.9752,lng:-3.1721,wiki:"https://en.wikipedia.org/wiki/Leith"},
+  {city:"edinburgh",cat:"district",name:"Victoria Street & Grassmarket",desc:"Изогнутая цветная улица. Независимые магазины, Armstrong's Vintage, букинисты",lat:55.9467,lng:-3.1955,wiki:"https://en.wikipedia.org/wiki/Victoria_Street,_Edinburgh"},
+  /* ── EDINBURGH · RESTAURANTS ── */
+  {city:"edinburgh",cat:"restaurant",name:"The Witchery",desc:"Романтичный ресторан у подножия замка. Готические интерьеры, шотландская кухня, дорого но эффектно",lat:55.9493,lng:-3.1951,wiki:"https://en.wikipedia.org/wiki/The_Witchery_by_the_Castle",website:"https://www.thewitchery.com"},
+  {city:"edinburgh",cat:"restaurant",name:"Timberyard",desc:"Локальные продукты, сезонное меню. Michelin Bib Gourmand. Резервировать заранее. Leith",lat:55.9458,lng:-3.2021,website:"https://www.timberyard.co"},
+  {city:"edinburgh",cat:"restaurant",name:"The Gardener's Cottage",desc:"Farm-to-table в старом садовом домике. Общие столы, дегустационное меню. У Calton Hill",lat:55.9563,lng:-3.1828,website:"https://thegardenerscottage.co"},
+  {city:"edinburgh",cat:"restaurant",name:"Oink",desc:"Культовые pulled pork sandwiches. Жарят целого поросёнка. £5–7. Несколько локаций. Victoria Street",lat:55.9473,lng:-3.1936,website:"https://www.oinkhogroast.co.uk"},
+  {city:"edinburgh",cat:"restaurant",name:"Mary's Milk Bar",desc:"Лучшее мороженое Эдинбурга. Авторские вкусы, всё делают сами. Grassmarket",lat:55.9471,lng:-3.1948,website:"https://www.marysmilkbar.com"},
+  {city:"edinburgh",cat:"restaurant",name:"The Dogs",desc:"Где обедают местные. Простая еда по честным ценам, сезонное меню. New Town. Без понтов",lat:55.9537,lng:-3.1954,website:"https://www.thedogsonline.co.uk"},
+  {city:"edinburgh",cat:"restaurant",name:"Dishoom Edinburgh",desc:"Та же концепция что в Лондоне — бомбейское кафе. St Andrew Square. Завтраки!",lat:55.9549,lng:-3.1927,website:"https://www.dishoom.com/edinburgh"},
+  {city:"edinburgh",cat:"restaurant",name:"The Scran & Scallie",desc:"Гастропаб от шеф-повара Tom Kitchin. Шотландские продукты, craft beer. Stockbridge",lat:55.9593,lng:-3.2097,website:"https://scranandscallie.com"},
+  {city:"edinburgh",cat:"restaurant",name:"Mums Great Comfort Food",desc:"Домашняя шотландская кухня: пироги, macaroni cheese, bangers & mash. Как у бабушки. Forrest Road",lat:55.9465,lng:-3.1894,website:"https://www.monstermashcafe.co.uk"},
+  {city:"edinburgh",cat:"restaurant",name:"Makars Gourmet Mash Bar",desc:"Haggis, neeps & tatties в разных вариациях. Шотландская классика. Mound Place",lat:55.9503,lng:-3.1939,website:"https://www.makarsmashbar.com"},
+  {city:"edinburgh",cat:"restaurant",name:"The Mosque Kitchen",desc:"Карри за £5 от мечети на Nicolson Square. Огромные порции, дёшево, аутентично. Обеденное время",lat:55.9462,lng:-3.1864},
+  {city:"edinburgh",cat:"restaurant",name:"Mamma's Pizza",desc:"Неаполитанская пицца по £7–9. Grassmarket. Дёшево и вкусно",lat:55.9470,lng:-3.1945,website:"https://www.mammaspizzaedinburgh.co.uk"},
+  {city:"edinburgh",cat:"restaurant",name:"Harajuku Kitchen",desc:"Японская домашняя кухня. Крошечное место, часто очередь. Bruntsfield. Без резерваций",lat:55.9413,lng:-3.2048,website:"https://harajukukitchen.co.uk"},
+  {city:"edinburgh",cat:"restaurant",name:"Ting Thai Caravan",desc:"Тайская уличная еда. Маленькое место, большие вкусы. Teviot Place",lat:55.9456,lng:-3.1899,website:"https://www.tingthai.com"},
+  {city:"edinburgh",cat:"restaurant",name:"The Piemaker",desc:"Шотландские пироги (steak, haggis, chicken). £4–6. South Bridge. Отличный фаст-фуд",lat:55.9487,lng:-3.1872,website:"https://www.thepiemakeredinburgh.co.uk"},
+  /* ── EDINBURGH · ART ── */
+  {city:"edinburgh",cat:"art",name:"Talbot Rice Gallery",desc:"Галерея университета Эдинбурга. Две части: Georgian Gallery (старое искусство) и White Gallery (современное). Бесплатно",lat:55.9476,lng:-3.1886,wiki:"https://en.wikipedia.org/wiki/Talbot_Rice_Gallery",website:"https://www.trg.ed.ac.uk"},
+  /* ── EDINBURGH · NATURE ── */
+  {city:"edinburgh",cat:"nature",name:"Royal Botanic Garden Edinburgh",desc:"70 акров садов, пальмовая оранжерея, китайский склон. Inverleith. Бесплатно (оранжерея платно)",lat:55.9656,lng:-3.2091,wiki:"https://en.wikipedia.org/wiki/Royal_Botanic_Garden_Edinburgh",website:"https://www.rbge.org.uk"},
+  {city:"edinburgh",cat:"nature",name:"Blackford Hill",desc:"Холм на юге города. Обсерватория, панорамные виды. Менее туристично чем Arthur's Seat",lat:55.9234,lng:-3.1862,wiki:"https://en.wikipedia.org/wiki/Blackford_Hill"},
+  {city:"edinburgh",cat:"nature",name:"Hermitage of Braid",desc:"Лесистая долина с ручьём в черте города. Тихое место для прогулок. Braid Hills",lat:55.9234,lng:-3.2014,wiki:"https://en.wikipedia.org/wiki/Hermitage_of_Braid"},
+  {city:"edinburgh",cat:"nature",name:"Corstorphine Hill",desc:"Лесной холм с башней Clermiston Tower. Виды, белки, тихие тропинки",lat:55.9530,lng:-3.2770,wiki:"https://en.wikipedia.org/wiki/Corstorphine_Hill"},
+  /* ── EDINBURGH · MUSIC ── */
+  {city:"edinburgh",cat:"music",name:"The Jazz Bar",desc:"Ежедневный джаз в подвале на Chambers Street. С 17:00. Вход £5–12. Культовое место",lat:55.9473,lng:-3.1885,website:"https://www.thejazzbar.co.uk"},
+  {city:"edinburgh",cat:"music",name:"Henry's Cellar Bar",desc:"Подвальный клуб для живой музыки. Джаз, инди, альтернатива. Morrison Street",lat:55.9460,lng:-3.2156,website:"https://www.henryscellarbar.com"},
+  /* ── EDINBURGH · SHOPPING ── */
+  {city:"edinburgh",cat:"shopping",name:"TK Maxx (Princes Street)",desc:"Дискаунт брендов. В самом центре на главной улице",lat:55.9520,lng:-3.1964,website:"https://www.tkmaxx.com"},
+  {city:"edinburgh",cat:"shopping",name:"Primark (Princes Street)",desc:"Бюджетная одежда. Огромный магазин на 3 этажа",lat:55.9524,lng:-3.1981,website:"https://www.primark.com"},
+  {city:"edinburgh",cat:"shopping",name:"Godiva Boutique",desc:"Винтажная одежда 1920–1980-х. West Port, рядом с Grassmarket. Отобранный винтаж",lat:55.9472,lng:-3.1973,website:"https://www.godivaboutique.co.uk"},
+  /* ── EDINBURGH · ATTRACTIONS ── */
+  {city:"edinburgh",cat:"attraction",name:"Holyrood Palace",desc:"Официальная резиденция королевской семьи в Шотландии. Сады, исторические апартаменты",lat:55.9527,lng:-3.1718,wiki:"https://en.wikipedia.org/wiki/Holyrood_Palace",website:"https://www.rct.uk/visit/palace-of-holyroodhouse"},
+  {city:"edinburgh",cat:"attraction",name:"Royal Yacht Britannia",desc:"Королевская яхта Елизаветы II, превращённая в музей. Ocean Terminal, Leith",lat:55.9817,lng:-3.1729,wiki:"https://en.wikipedia.org/wiki/HMY_Britannia",website:"https://www.royalyachtbritannia.co.uk"},
+  {city:"edinburgh",cat:"attraction",name:"Camera Obscura",desc:"Музей оптических иллюзий + смотровая площадка с камерой-обскурой. Royal Mile. Для всех возрастов",lat:55.9489,lng:-3.1951,wiki:"https://en.wikipedia.org/wiki/Camera_Obscura_and_World_of_Illusions",website:"https://www.camera-obscura.co.uk"},
+  {city:"edinburgh",cat:"attraction",name:"Real Mary King's Close",desc:"Подземные улицы XVII века под Royal Mile. Экскурсии про чуму, призраков, жизнь в Old Town",lat:55.9502,lng:-3.1901,wiki:"https://en.wikipedia.org/wiki/Mary_King%27s_Close",website:"https://www.realmarykingsclose.com"},
+  {city:"edinburgh",cat:"daytrip",name:"Stirling",desc:"50 мин поездом. Стерлингский замок, поле битвы при Бэннокберне",lat:56.1165,lng:-3.9369,wiki:"https://en.wikipedia.org/wiki/Stirling",website:"https://www.stirlingcastle.scot"},
+  {city:"edinburgh",cat:"daytrip",name:"St Andrews",desc:"1ч 30 мин. Родина гольфа, руины собора, университет, пляж",lat:56.3398,lng:-2.7966,wiki:"https://en.wikipedia.org/wiki/St_Andrews",website:"https://www.visitscotland.com/destinations-maps/st-andrews"},
+  {city:"edinburgh",cat:"daytrip",name:"Glasgow",desc:"50 мин поездом. Kelvingrove Museum (бесплатно!), Mackintosh, Barras Market, стрит-арт",lat:55.8642,lng:-4.2518,wiki:"https://en.wikipedia.org/wiki/Glasgow",website:"https://peoplemakeglasgow.com"},
+  {city:"edinburgh",cat:"daytrip",name:"North Berwick",desc:"30 мин поездом. Bass Rock (150 тыс. олушей!), пляжи",lat:56.0579,lng:-2.7234,wiki:"https://en.wikipedia.org/wiki/North_Berwick"},
+  {city:"edinburgh",cat:"daytrip",name:"Loch Ness & Highlands",desc:"Целый день. Великолепные пейзажи, озеро Лох-Несс, Cairngorms. Лучше с гидом",lat:57.3229,lng:-4.4244,wiki:"https://en.wikipedia.org/wiki/Loch_Ness",website:"https://www.visitscotland.com/see-do/attractions/loch-ness"},
+  {city:"glasgow",cat:"arch",name:"Glasgow School of Art",desc:"Главное здание шотландского модерна. Ч.Р. Макинтош, 1899–1909. После двух пожаров идёт реставрация",lat:55.8651,lng:-4.2698,wiki:"https://en.wikipedia.org/wiki/Glasgow_School_of_Art",website:"https://www.gsa.ac.uk"},
+  {city:"glasgow",cat:"arch",name:"Glasgow Cathedral",desc:"Средневековый собор XII века, переживший Реформацию. Крипта с лесом колонн",lat:55.8632,lng:-4.2489,wiki:"https://en.wikipedia.org/wiki/Glasgow_Cathedral",website:"https://www.glasgowcathedral.org"},
+  {city:"glasgow",cat:"arch",name:"Университет Глазго",desc:"Неоготический кампус George Gilbert Scott. Источник вдохновения для Хогвартса",lat:55.8714,lng:-4.2893,wiki:"https://en.wikipedia.org/wiki/University_of_Glasgow",website:"https://www.gla.ac.uk"},
+  {city:"glasgow",cat:"arch",name:"City Chambers",desc:"Мраморные интерьеры итальянского Ренессанса. George Square, 1888. Бесплатные экскурсии",lat:55.8609,lng:-4.2501,wiki:"https://en.wikipedia.org/wiki/Glasgow_City_Chambers"},
+  {city:"glasgow",cat:"arch",name:"The Lighthouse",desc:"Бывшая редакция Glasgow Herald (ранний Макинтош). Центр архитектуры и дизайна",lat:55.8608,lng:-4.2539,wiki:"https://en.wikipedia.org/wiki/The_Lighthouse_(Glasgow)",website:"https://www.thelighthouse.co.uk"},
+  {city:"glasgow",cat:"arch",name:"The Willow Tea Rooms",desc:"Полностью спроектированная Макинтошем чайная. Стулья с высокими спинками — икона дизайна. 1903",lat:55.8636,lng:-4.2597,wiki:"https://en.wikipedia.org/wiki/Willow_Tearooms",website:"https://www.willowtearooms.co.uk"},
+  {city:"glasgow",cat:"arch",name:"House for an Art Lover",desc:"Нереализованный проект Макинтоша 1901 года, воплощённый спустя почти век. Bellahouston Park",lat:55.8433,lng:-4.2986,wiki:"https://en.wikipedia.org/wiki/House_for_an_Art_Lover",website:"https://www.houseforanartlover.co.uk"},
+  {city:"glasgow",cat:"arch",name:"Riverside Museum",desc:"Музей транспорта. Зигзагообразная цинковая крыша — метафора движения. Заха Хадид, 2011",lat:55.8676,lng:-4.3072,wiki:"https://en.wikipedia.org/wiki/Riverside_Museum",website:"https://www.glasgowlife.org.uk/museums/venues/riverside-museum"},
+  {city:"glasgow",cat:"arch",name:"SEC Armadillo",desc:"Серебристые панцирные формы на берегу Клайда. Foster + Partners",lat:55.8608,lng:-4.2877,wiki:"https://en.wikipedia.org/wiki/SEC_Armadillo",website:"https://www.sec.co.uk"},
+  {city:"glasgow",cat:"arch",name:"Glasgow Science Centre",desc:"Титановый полумесяц и вращающаяся башня. Pacific Quay",lat:55.8583,lng:-4.2886,wiki:"https://en.wikipedia.org/wiki/Glasgow_Science_Centre",website:"https://www.glasgowsciencecentre.org"},
+  {city:"glasgow",cat:"museum",name:"Kelvingrove Art Gallery and Museum",desc:"Роскошное здание. Коллекция от Дали до Макинтоша. Бесплатно",lat:55.8688,lng:-4.2882,wiki:"https://en.wikipedia.org/wiki/Kelvingrove_Art_Gallery_and_Museum",website:"https://www.glasgowlife.org.uk/museums/venues/kelvingrove-art-gallery-and-museum"},
+  {city:"glasgow",cat:"museum",name:"The Hunterian / Mackintosh House",desc:"Воссозданные интерьеры дома Макинтошей — тотальный дизайн до дверных ручек",lat:55.8726,lng:-4.2908,wiki:"https://en.wikipedia.org/wiki/The_Hunterian",website:"https://www.gla.ac.uk/hunterian"},
+  {city:"glasgow",cat:"museum",name:"People's Palace & Winter Gardens",desc:"Музей социальной истории + викторианская оранжерея. Glasgow Green. Бесплатно",lat:55.8543,lng:-4.2317,wiki:"https://en.wikipedia.org/wiki/People%27s_Palace",website:"https://www.glasgowlife.org.uk/museums/venues/peoples-palace"},
+  {city:"glasgow",cat:"design_shop",name:"Timorous Beasties",desc:"Текстильный дизайн: дамасские узоры с насекомыми и сюрреализмом. Great Western Road",lat:55.8773,lng:-4.2983,website:"https://www.timorousbeasties.com"},
+  {city:"glasgow",cat:"design_shop",name:"Glasgow Print Studio",desc:"Открытая мастерская печатной графики + магазин принтов. Merchant City",lat:55.8589,lng:-4.2452,website:"https://www.gpsart.co.uk"},
+  {city:"glasgow",cat:"district",name:"Merchant City",desc:"Торговый квартал XVIII века. Warehouse-архитектура, галереи, Trongate 103",lat:55.8596,lng:-4.2433,wiki:"https://en.wikipedia.org/wiki/Merchant_City"},
+  {city:"glasgow",cat:"district",name:"Finnieston",desc:"Самый модный район Глазго. Независимые рестораны, ретро-мебельные, бары",lat:55.8631,lng:-4.2987,wiki:"https://en.wikipedia.org/wiki/Finnieston"},
+  {city:"glasgow",cat:"district",name:"SWG3 / The Galvanizers Yard",desc:"Бывший промышленный комплекс → арт-пространство. Геотермальная система от танцпола",lat:55.8663,lng:-4.3012,website:"https://swg3.tv"},
+  {city:"glasgow",cat:"district",name:"BAaD — Barras Art and Design",desc:"Креативный хаб на территории блошиного рынка. Мастерские, пивоварня. Gallowgate",lat:55.8554,lng:-4.2367,website:"https://www.barrasartanddesign.com"},
+  /* ── GLASGOW · RESTAURANTS ── */
+  {city:"glasgow",cat:"restaurant",name:"Ubiquitous Chip",desc:"Шотландская классика с 1971 года. Внутренний дворик с виноградом. West End. Легенда Глазго",lat:55.8730,lng:-4.2895,wiki:"https://en.wikipedia.org/wiki/Ubiquitous_Chip",website:"https://www.ubiquitouschip.co.uk"},
+  {city:"glasgow",cat:"restaurant",name:"Ox and Finch",desc:"Small plates, шотландские продукты с мировыми влияниями. Finnieston. Всегда многолюдно — резервировать!",lat:55.8635,lng:-4.2963,website:"https://www.oxandfinch.com"},
+  {city:"glasgow",cat:"restaurant",name:"The Gannet",desc:"Современная шотландская кухня. Michelin Bib Gourmand. Сезонное меню. Finnieston",lat:55.8640,lng:-4.2952,website:"https://www.thegannetgla.com"},
+  {city:"glasgow",cat:"restaurant",name:"Paesano Pizza",desc:"Лучшая неаполитанская пицца в Глазго по £7. Несколько локаций. Без резерваций — будьте готовы к очереди",lat:55.8595,lng:-4.2553,website:"https://www.paesanopizza.co.uk"},
+  {city:"glasgow",cat:"restaurant",name:"Buck's Bar",desc:"Где едят студенты и местные. Американские бургеры, mac & cheese. West End. Непафосно",lat:55.8731,lng:-4.2905,website:"https://www.bucksbar.co.uk"},
+  {city:"glasgow",cat:"restaurant",name:"Saramago Café Bar",desc:"Веганское кафе в Centre for Contemporary Arts. Brunches, торты. Pay-what-you-can по воскресеньям!",lat:55.8651,lng:-4.2575,website:"https://www.cca-glasgow.com/saramago-cafe-bar"},
+  {city:"glasgow",cat:"restaurant",name:"Café Gandolfi",desc:"Культовое кафе с 1979 года. Мебель работы Тим Стед. Merchant City. Шотландские завтраки",lat:55.8584,lng:-4.2442,website:"https://cafegandolfi.com"},
+  {city:"glasgow",cat:"restaurant",name:"The 78",desc:"Веганский бар-кафе. Бургеры, пиво, живая музыка. Finnieston. Дешёво",lat:55.8639,lng:-4.2969,website:"https://www.the78barandkitchen.com"},
+  {city:"glasgow",cat:"restaurant",name:"Tantrum Doughnuts",desc:"Лучшие пончики Глазго. Необычные вкусы. Shawlands. Берите несколько!",lat:55.8277,lng:-4.2838,website:"https://www.tantrumdoughnuts.com"},
+  {city:"glasgow",cat:"restaurant",name:"Halloumi",desc:"Греческий стритфуд. Гиро, сувлаки, халлуми фри. Несколько локаций. Дёшево и вкусно",lat:55.8609,lng:-4.2563,website:"https://www.halloumi.co.uk"},
+  {city:"glasgow",cat:"restaurant",name:"Singl-end",desc:"Культовые бранчи. Яйца Бенедикт, панкейки, specialty coffee. Garnethill. Очереди по выходным",lat:55.8668,lng:-4.2673,website:"https://www.singlend.co.uk"},
+  /* ── GLASGOW · ART ── */
+  {city:"glasgow",cat:"art",name:"Tramway",desc:"Огромное пространство для современного искусства в бывшем трамвайном депо. Southside. Бесплатно",lat:55.8299,lng:-4.2625,wiki:"https://en.wikipedia.org/wiki/Tramway_(arts_centre)",website:"https://www.tramway.org"},
+  {city:"glasgow",cat:"art",name:"GoMA (Gallery of Modern Art)",desc:"Современное искусство в неоклассическом здании. Royal Exchange Square. Бесплатно",lat:55.8608,lng:-4.2494,wiki:"https://en.wikipedia.org/wiki/Gallery_of_Modern_Art,_Glasgow",website:"https://www.glasgowlife.org.uk/museums/venues/goma"},
+  {city:"glasgow",cat:"art",name:"Street Level Photoworks",desc:"Галерея фотографии. Выставки, мастерские. Trongate. Бесплатно",lat:55.8575,lng:-4.2430,website:"https://www.streetlevelphotoworks.org"},
+  /* ── GLASGOW · NATURE ── */
+  {city:"glasgow",cat:"nature",name:"Kelvingrove Park",desc:"Парк вдоль реки Kelvin. Викторианские мосты, скейт-парк, пикники. West End",lat:55.8710,lng:-4.2879,wiki:"https://en.wikipedia.org/wiki/Kelvingrove_Park"},
+  {city:"glasgow",cat:"nature",name:"Glasgow Botanic Gardens",desc:"Ботанические сады с викторианской оранжереей Kibble Palace. West End. Бесплатно",lat:55.8788,lng:-4.2828,wiki:"https://en.wikipedia.org/wiki/Glasgow_Botanic_Gardens",website:"https://www.glasgow.gov.uk/botanicgardens"},
+  /* ── GLASGOW · MUSIC ── */
+  {city:"glasgow",cat:"music",name:"The Old Fruitmarket",desc:"Концертный зал в бывшем фруктовом рынке. Джаз, классика, мировая музыка. Merchant City",lat:55.8586,lng:-4.2472,website:"https://www.glasgowconcerthalls.com/our-venues/old-fruitmarket"},
+  {city:"glasgow",cat:"music",name:"Nice n Sleazy",desc:"Культовый бар с живой музыкой. Джаз, инди, панк. Sauchiehall Street. Дешёвое пиво",lat:55.8648,lng:-4.2621,website:"https://www.nicensleazy.com"},
+  /* ── GLASGOW · SHOPPING ── */
+  {city:"glasgow",cat:"shopping",name:"TK Maxx (Argyle Street)",desc:"Дискаунт брендовой одежды. Большой магазин в центре",lat:55.8572,lng:-4.2550,website:"https://www.tkmaxx.com"},
+  {city:"glasgow",cat:"shopping",name:"Primark (Argyle Street)",desc:"Бюджетная одежда. Огромный флагман на 4 этажа",lat:55.8578,lng:-4.2582,website:"https://www.primark.com"},
+  {city:"glasgow",cat:"shopping",name:"Starry Starry Night",desc:"Лучший винтажный магазин Глазго. Dowanside Lane, West End. 1960–1990-е",lat:55.8754,lng:-4.2898,website:"https://www.starrystarrynight.co.uk"},
+  /* ── GLASGOW · ATTRACTIONS ── */
+  {city:"glasgow",cat:"attraction",name:"Necropolis",desc:"Викторианское кладбище на холме за собором. 50 тыс захоронений, виды на город, готическая атмосфера",lat:55.8645,lng:-4.2351,wiki:"https://en.wikipedia.org/wiki/Glasgow_Necropolis"},
+  {city:"glasgow",cat:"attraction",name:"The Barras Market",desc:"Легендарный блошиный рынок с 1920-х. Суббота–воскресенье. Винтаж, антиквариат, абсолютно всё",lat:55.8548,lng:-4.2368,wiki:"https://en.wikipedia.org/wiki/Barras"},
+  {city:"glasgow",cat:"attraction",name:"Pollok Country Park",desc:"Огромный парк с Highland cattle (мохнатыми коровами!). Burrell Collection — музей искусства. Бесплатно",lat:55.8282,lng:-4.3033,wiki:"https://en.wikipedia.org/wiki/Pollok_Country_Park",website:"https://www.glasgow.gov.uk/pollokpark"},
+  {city:"glasgow",cat:"attraction",name:"Ashton Lane",desc:"Мощёная улочка в West End. Кино Grosvenor, уличные кафе, фонари. Как в деревне внутри города",lat:55.8753,lng:-4.2899,wiki:"https://en.wikipedia.org/wiki/Ashton_Lane"},
+];
+
+var TRIP_START='2026-06-26',TRIP_END='2026-07-10';
+function tripDays(){var days=[],d=new Date(TRIP_START);while(d<=new Date(TRIP_END)){days.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}return days;}
+var DOW=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+function fmtDay(iso){var d=new Date(iso+'T12:00:00');return DOW[d.getDay()]+', '+d.getDate()+'.'+(d.getMonth()+1);}
+function fmtDate(d){if(!d)return'';var p=d.split('-');return p[2]+'.'+p[1];}
+
+var userData={};
+function loadUD(){try{var d=localStorage.getItem('uk_map_ud3');if(d)userData=JSON.parse(d);}catch(e){}}
+function saveUD(){try{localStorage.setItem('uk_map_ud3',JSON.stringify(userData));}catch(e){}}
+function getUD(k){return userData[k]||{};}
+function setUD(k,f,v){if(!userData[k])userData[k]={};userData[k][f]=v;saveUD();}
+function placeKey(p){return p.name+'|'+p.lat+'|'+p.lng;}
+
+var customPlaces=[];
+function loadCP(){try{var d=localStorage.getItem('uk_map_cp3');if(d)customPlaces=JSON.parse(d);}catch(e){}customPlaces.forEach(function(p){p._custom=true;});}
+function saveCP(){try{localStorage.setItem('uk_map_cp3',JSON.stringify(customPlaces));}catch(e){}}
+function allPlaces(){return PLACES.concat(customPlaces);}
+
+var activeCity='both',activeCats={},markers={},selected=null,map,routeLines=[];
+var activeFilters={fav:false,visited:false,hasDate:false};
+var pickingCoords=false,editingCustomIdx=-1,calOpen=false,activeRouteDay=null;
+Object.keys(CATS).forEach(function(k){activeCats[k]=true;});
+
+function init(){
+  loadUD();loadCP();
+  map=L.map('map',{center:[54.5,-2.5],zoom:6});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CartoDB',maxZoom:19}).addTo(map);
+  map.on('click',onMapClick);
+  buildCats();buildCatSelect();render();
+}
+
+function buildCats(){
+  var el=document.getElementById('cats');
+  Object.keys(CATS).forEach(function(k){
+    var v=CATS[k],b=document.createElement('button');
+    b.className='cat-chip';b.id='chip-'+k;b.style.borderColor=v.color;b.style.color=v.color;
+    b.innerHTML='<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+v.color+';margin-right:2px;vertical-align:1px"></span>'+v.label;
+    b.onclick=function(){activeCats[k]=!activeCats[k];b.classList.toggle('off',!activeCats[k]);render();};
+    el.appendChild(b);
+  });
+}
+function buildCatSelect(){var sel=document.getElementById('fCat');Object.keys(CATS).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=CATS[k].label;sel.appendChild(o);});}
+function toggleFilter(f){activeFilters[f]=!activeFilters[f];document.getElementById('filter'+(f==='fav'?'Fav':f==='visited'?'Vis':'Date')).classList.toggle('on',activeFilters[f]);render();}
+
+function makeIcon(color,isSel,ud){
+  var s=isSel?14:9;
+  var ring=isSel?'<circle cx="16" cy="16" r="13" fill="none" stroke="'+color+'" stroke-width="2" opacity="0.35"/>':'';
+  var heart=(ud&&ud.fav)?'<text x="16" y="6" text-anchor="middle" font-size="8" fill="#e74c3c">♥</text>':'';
+  var check=(ud&&ud.visited)?'<text x="16" y="30" text-anchor="middle" font-size="8" fill="#27ae60">✓</text>':'';
+  return L.divIcon({className:'',html:'<svg width="32" height="32" viewBox="0 0 32 32">'+ring+'<circle cx="16" cy="16" r="'+s+'" fill="'+color+'" stroke="#fff" stroke-width="2"/>'+heart+check+'</svg>',iconSize:[32,32],iconAnchor:[16,16]});
+}
+function mkLinks(p,stop){var s=stop?' onclick="event.stopPropagation()"':'',ls=[];if(p.website)ls.push('<a href="'+p.website+'" target="_blank"'+s+'>🌐</a>');if(p.wiki)ls.push('<a href="'+p.wiki+'" target="_blank"'+s+'>📖</a>');return ls.length?'<div class="'+(stop?'links':'popup-links')+'">'+ls.join('')+'</div>':'';}
+
+function render(){
+  Object.keys(markers).forEach(function(i){map.removeLayer(markers[i]);});markers={};
+  var list=document.getElementById('list');list.innerHTML='';
+  var search=(document.getElementById('searchInput').value||'').toLowerCase();
+  var sortMode=document.getElementById('sortSelect').value;
+  var dateFrom=document.getElementById('dateFrom').value,dateTo=document.getElementById('dateTo').value;
+  var cityLabels={london:'Лондон',edinburgh:'Эдинбург',glasgow:'Глазго'};
+  var places=allPlaces(),items=[];
+
+  places.forEach(function(p,i){
+    if(!activeCats[p.cat])return;
+    if(activeCity!=='both'&&p.city!==activeCity)return;
+    var key=placeKey(p),ud=getUD(key);
+    if(activeFilters.fav&&!ud.fav)return;
+    if(activeFilters.visited&&!ud.visited)return;
+    if(activeFilters.hasDate&&!ud.plannedDate)return;
+    if(dateFrom&&ud.plannedDate&&ud.plannedDate<dateFrom)return;
+    if(dateTo&&ud.plannedDate&&ud.plannedDate>dateTo)return;
+    if(search&&p.name.toLowerCase().indexOf(search)===-1&&p.desc.toLowerCase().indexOf(search)===-1&&(CATS[p.cat]?CATS[p.cat].label:'').toLowerCase().indexOf(search)===-1)return;
+    items.push({p:p,i:i,ud:ud,key:key});
+  });
+
+  if(sortMode==='name')items.sort(function(a,b){return a.p.name.localeCompare(b.p.name);});
+  else if(sortMode==='date')items.sort(function(a,b){return(a.ud.plannedDate||'z').localeCompare(b.ud.plannedDate||'z');});
+  else if(sortMode==='fav')items.sort(function(a,b){return(b.ud.fav?1:0)-(a.ud.fav?1:0);});
+  else if(sortMode==='cat')items.sort(function(a,b){return a.p.cat.localeCompare(b.p.cat);});
+
+  items.forEach(function(item){
+    var p=item.p,i=item.i,ud=item.ud,c=CATS[p.cat]?CATS[p.cat].color:'#999',catLabel=CATS[p.cat]?CATS[p.cat].label:p.cat;
+    var isSel=selected===i;
+    var m=L.marker([p.lat,p.lng],{icon:makeIcon(c,isSel,ud)}).addTo(map);
+    var noteHtml=ud.note?'<div class="popup-note-show">📝 '+ud.note+'</div>':'';
+    m.bindPopup('<div class="popup-inner"><div class="popup-tag" style="color:'+c+'">'+catLabel+'</div><div class="popup-name">'+p.name+'</div><div class="popup-desc">'+p.desc+'</div>'+noteHtml+mkLinks(p,false)+
+      '<div class="popup-actions">'+
+      '<button class="popup-action-btn '+(ud.fav?'on-fav':'')+'" onclick="toggleFav('+i+')">'+(ud.fav?'♥':'♡')+'</button>'+
+      '<button class="popup-action-btn '+(ud.visited?'on-vis':'')+'" onclick="toggleVisited('+i+')">'+(ud.visited?'✓':'○')+'</button>'+
+      (p._custom?'<button class="popup-action-btn" onclick="openEditModal('+i+')">✎</button>':'')+
+      '<input type="date" class="popup-date-input" value="'+(ud.plannedDate||'')+'" onchange="setDate('+i+',this.value)"/>'+
+      '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
+      '</div></div>',{maxWidth:280});
+    (function(idx,mk){mk.on('click',function(){selectPlace(idx);});})(i,m);
+    markers[i]=m;
+
+    var badges='';
+    if(ud.fav||ud.visited||ud.plannedDate||p._custom||ud.note){
+      badges='<div class="card-badges">';
+      if(ud.fav)badges+='<span class="badge badge-fav">♥</span>';
+      if(ud.visited)badges+='<span class="badge badge-vis">✓</span>';
+      if(ud.plannedDate)badges+='<span class="badge badge-date">'+fmtDate(ud.plannedDate)+'</span>';
+      if(p._custom)badges+='<span class="badge badge-custom">✦</span>';
+      if(ud.note)badges+='<span class="badge badge-note">📝</span>';
+      badges+='</div>';
+    }
+    var card=document.createElement('div');
+    card.className='place-card'+(isSel?' active':'');card.id='card-'+i;
+    card.innerHTML=badges+'<span class="ptag" style="color:'+c+';border-color:'+c+'">'+catLabel+'</span>'+(activeCity==='both'?'<span class="pcity">'+cityLabels[p.city]+'</span>':'')+'<div class="pname">'+p.name+'</div><div class="pdesc">'+p.desc+'</div>'+(ud.note?'<div class="pnote">📝 '+ud.note+'</div>':'')+mkLinks(p,true)+
+      '<div class="card-actions"><button class="card-action'+(ud.fav?' fav-on':'')+'" onclick="event.stopPropagation();toggleFav('+i+')">♥</button><button class="card-action'+(ud.visited?' vis-on':'')+'" onclick="event.stopPropagation();toggleVisited('+i+')">✓</button></div>';
+    (function(idx){card.onclick=function(){selectPlace(idx);};})(i);
+    list.appendChild(card);
+  });
+  document.getElementById('countText').textContent='Показано: '+items.length;
+  if(calOpen)renderCalendar();
+  drawRoute();
+}
+
+function selectPlace(idx){
+  selected=(selected===idx)?null:idx;
+  var p=allPlaces()[idx];render();
+  if(selected!==null){map.setView([p.lat,p.lng],14,{animate:true});if(markers[idx])markers[idx].openPopup();var card=document.getElementById('card-'+idx);if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+function switchCity(c,btn){activeCity=c;selected=null;document.querySelectorAll('.city-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');var views={both:{c:[54.5,-2.5],z:6},london:{c:[51.505,-0.11],z:11},edinburgh:{c:[55.953,-3.188],z:12},glasgow:{c:[55.864,-4.252],z:13}};var v=views[c];map.setView(v.c,v.z,{animate:true});render();}
+function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav',!u.fav);render();}
+function toggleVisited(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'visited',!u.visited);render();}
+function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');render();}
+function setNote(i,v){setUD(placeKey(allPlaces()[i]),'note',v||'');}
+
+/* ── CALENDAR ── */
+function toggleCalendar(){calOpen=!calOpen;document.getElementById('calPanel').classList.toggle('show',calOpen);document.getElementById('calToggle').classList.toggle('on',calOpen);if(calOpen)renderCalendar();}
+
+function renderCalendar(){
+  var body=document.getElementById('calBody');body.innerHTML='';
+  var days=tripDays(),places=allPlaces();
+  days.forEach(function(day){
+    var dp=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,i:i,ud:ud});});
+    var div=document.createElement('div');div.className='cal-day';
+    var cnt=dp.length,cntCls=cnt>5?'cal-day-count warn':'cal-day-count';
+    var routeBtn=cnt>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺 Маршрут</button>':'';
+    div.innerHTML='<div class="cal-day-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>'+fmtDay(day)+'</span><span style="display:flex;align-items:center;gap:4px"><span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+'</span></div>';
+    var bd=document.createElement('div');bd.className='cal-day-body';
+    if(!cnt){bd.innerHTML='<div class="cal-empty">—</div>';}
+    else dp.forEach(function(item){
+      var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';
+      var el=document.createElement('div');el.className='cal-place';
+      el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span><span class="cal-pname">'+item.p.name+'</span><span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
+      el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);
+    });
+    div.appendChild(bd);body.appendChild(div);
+  });
+  // Unassigned favs
+  var un=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push({p:p,i:i});});
+  if(un.length){
+    var div=document.createElement('div');div.className='cal-day';
+    div.innerHTML='<div class="cal-day-header cal-unassigned" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>⭐ Без даты (избранные)</span><span class="cal-day-count">'+un.length+'</span></div>';
+    var bd=document.createElement('div');bd.className='cal-day-body';
+    un.forEach(function(item){var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';var el=document.createElement('div');el.className='cal-place';el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span><span class="cal-pname">'+item.p.name+'</span>';el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);});
+    div.appendChild(bd);body.appendChild(div);
+  }
+}
+
+/* ── ROUTES ── */
+function clearRoute(){routeLines.forEach(function(l){map.removeLayer(l);});routeLines=[];}
+function showDayRoute(day){if(activeRouteDay===day){activeRouteDay=null;clearRoute();renderCalendar();return;}activeRouteDay=day;drawRoute();renderCalendar();}
+function drawRoute(){
+  clearRoute();if(!activeRouteDay)return;
+  var places=allPlaces(),pts=[];
+  places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.plannedDate===activeRouteDay)pts.push([p.lat,p.lng]);});
+  if(pts.length<2)return;
+  var line=L.polyline(pts,{color:'#3498db',weight:3,dashArray:'8 6',opacity:0.7}).addTo(map);routeLines.push(line);
+  pts.forEach(function(pt,idx){
+    var num=L.divIcon({className:'',html:'<div style="background:#3498db;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)">'+(idx+1)+'</div>',iconSize:[20,20],iconAnchor:[10,10]});
+    routeLines.push(L.marker(pt,{icon:num,interactive:false}).addTo(map));
+  });
+  map.fitBounds(L.latLngBounds(pts).pad(0.15),{animate:true});
+}
+
+/* ── EXPORT ICS ── */
+function exportICS(){
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//UK Trip//EN','CALSCALE:GREGORIAN'];
+  allPlaces().forEach(function(p){
+    var ud=getUD(placeKey(p));if(!ud.plannedDate)return;
+    var d=ud.plannedDate.replace(/-/g,'');
+    lines.push('BEGIN:VEVENT','DTSTART;VALUE=DATE:'+d,'DTEND;VALUE=DATE:'+d,'SUMMARY:'+p.name,'DESCRIPTION:'+(p.desc||'').replace(/\n/g,'\\n')+(ud.note?'\\n📝 '+ud.note.replace(/\n/g,'\\n'):''));
+    if(p.website)lines.push('URL:'+p.website);
+    lines.push('GEO:'+p.lat+';'+p.lng,'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='uk_trip.ics';a.click();
+}
+
+/* ── PRINT ── */
+function exportPrint(){
+  var w=window.open('','_blank');
+  var h='<html><head><meta charset="utf-8"><title>UK Trip</title><style>body{font-family:-apple-system,sans-serif;padding:20px;font-size:12px}h1{font-size:18px;margin-bottom:10px}h2{font-size:13px;margin:14px 0 4px;padding:4px 8px;background:#f0f0f0;border-radius:6px}.p{padding:3px 0;border-bottom:1px solid #eee;display:flex;gap:6px}.ct{font-size:9px;padding:1px 5px;border-radius:5px;color:#fff;white-space:nowrap}.n{font-weight:600}.d{color:#666;font-size:11px}.nt{color:#8854d0;font-style:italic;font-size:11px}</style></head><body>';
+  h+='<h1>🇬🇧 UK Trip · 26.06 — 10.07.2026</h1>';
+  var days=tripDays(),places=allPlaces();
+  days.forEach(function(day){
+    var dp=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,ud:ud});});
+    if(!dp.length)return;
+    h+='<h2>'+fmtDay(day)+' ('+dp.length+')</h2>';
+    dp.forEach(function(it){var c=CATS[it.p.cat]?CATS[it.p.cat].color:'#999';h+='<div class="p"><span class="ct" style="background:'+c+'">'+(CATS[it.p.cat]?CATS[it.p.cat].label:'')+'</span><span><span class="n">'+it.p.name+'</span> — <span class="d">'+it.p.desc+'</span>'+(it.ud.note?' <span class="nt">📝 '+it.ud.note+'</span>':'')+'</span></div>';});
+  });
+  var un=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push(p);});
+  if(un.length){h+='<h2>⭐ Без даты</h2>';un.forEach(function(p){var c=CATS[p.cat]?CATS[p.cat].color:'#999';h+='<div class="p"><span class="ct" style="background:'+c+'">'+(CATS[p.cat]?CATS[p.cat].label:'')+'</span><span class="n">'+p.name+'</span> — <span class="d">'+p.desc+'</span></div>';});}
+  h+='</body></html>';w.document.write(h);w.document.close();setTimeout(function(){w.print();},400);
+}
+
+/* ── MAP CLICK ── */
+function onMapClick(e){if(!pickingCoords)return;document.getElementById('fLat').value=e.latlng.lat.toFixed(4);document.getElementById('fLng').value=e.latlng.lng.toFixed(4);document.getElementById('clickHint').innerHTML='✅ Координаты выбраны!';document.getElementById('clickHint').style.background='#e8f8ef';document.getElementById('clickHint').style.color='#27ae60';}
+
+/* ── MODAL ── */
+function openAddModal(){editingCustomIdx=-1;document.getElementById('modalTitle').textContent='Добавить место';document.getElementById('modalDelete').style.display='none';['fName','fDesc','fLat','fLng','fWebsite','fWiki'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fCity').value=activeCity==='both'?'london':activeCity;document.getElementById('fCat').value='restaurant';document.getElementById('clickHint').innerHTML='📍 Кликните на карту для координат';document.getElementById('clickHint').style.background='#e8f0fd';document.getElementById('clickHint').style.color='#3498db';document.getElementById('modalOverlay').classList.add('show');pickingCoords=true;}
+function openEditModal(idx){var p=allPlaces()[idx];if(!p._custom)return;editingCustomIdx=customPlaces.indexOf(p);document.getElementById('modalTitle').textContent='Редактировать';document.getElementById('modalDelete').style.display='inline-block';document.getElementById('fName').value=p.name;document.getElementById('fDesc').value=p.desc;document.getElementById('fCity').value=p.city;document.getElementById('fCat').value=p.cat;document.getElementById('fLat').value=p.lat;document.getElementById('fLng').value=p.lng;document.getElementById('fWebsite').value=p.website||'';document.getElementById('fWiki').value=p.wiki||'';document.getElementById('clickHint').innerHTML='📍 Кликните для изменения координат';document.getElementById('clickHint').style.background='#e8f0fd';document.getElementById('clickHint').style.color='#3498db';document.getElementById('modalOverlay').classList.add('show');pickingCoords=true;}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');pickingCoords=false;}
+function savePlace(){var name=document.getElementById('fName').value.trim();if(!name){alert('Укажите название');return;}var lat=parseFloat(document.getElementById('fLat').value),lng=parseFloat(document.getElementById('fLng').value);if(isNaN(lat)||isNaN(lng)){alert('Укажите координаты');return;}var place={city:document.getElementById('fCity').value,cat:document.getElementById('fCat').value,name:name,desc:document.getElementById('fDesc').value.trim(),lat:lat,lng:lng,_custom:true};var w=document.getElementById('fWebsite').value.trim(),wi=document.getElementById('fWiki').value.trim();if(w)place.website=w;if(wi)place.wiki=wi;if(editingCustomIdx>=0)customPlaces[editingCustomIdx]=place;else customPlaces.push(place);saveCP();closeModal();selected=null;render();}
+function deleteCustomPlace(){if(editingCustomIdx<0)return;if(!confirm('Удалить?'))return;customPlaces.splice(editingCustomIdx,1);saveCP();closeModal();selected=null;render();}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
