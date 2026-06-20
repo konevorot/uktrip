@@ -135,6 +135,12 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 .popup-file-item:hover{opacity:.8}
 .popup-file-del{font-size:12px;opacity:.6;cursor:pointer}
 .popup-file-del:hover{opacity:1}
+.cal-event{padding:8px 14px;display:flex;align-items:center;gap:8px;font-size:12px;border-top:1px solid #f0f0ec;cursor:pointer;min-height:44px;background:#fffbf0}
+.cal-event:hover{background:#fff6e0}
+.cal-event .cal-evt-icon{font-size:14px;flex-shrink:0}
+.cal-event .cal-evt-name{flex:1;font-weight:500}
+.cal-event .cal-evt-note{font-size:10px;color:var(--muted);margin-top:1px}
+.cal-event .cal-evt-time{font-size:10px;color:var(--planned);font-weight:600;min-width:38px}
 .cal-route-btn{padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;min-height:32px}
 .cal-route-btn.on{background:var(--planned);color:#fff;border-color:var(--planned)}
 .cal-unassigned{background:#fff3e0}
@@ -278,6 +284,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
   <div class="cal-panel" id="calPanel">
     <div class="cal-header"><h3>📅 План по дням</h3>
       <div class="cal-export-btns">
+        <button class="cal-export-btn" onclick="openEventModal()">＋ Событие</button>
         <button class="cal-export-btn" onclick="exportICS()">📥 .ics</button>
         <button class="cal-export-btn" onclick="exportPrint()">🖨 Печать</button>
       </div>
@@ -293,7 +300,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
   <button id="tabCal" onclick="switchMobileView('cal')"><span class="tab-icon">📅</span>Календарь</button>
 </div>
 
-<!-- MODAL -->
+<!-- PLACE MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header"><h2 id="modalTitle">Добавить место</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -335,6 +342,33 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
       <button class="modal-btn modal-btn-delete" id="modalDelete" onclick="deleteCustomPlace()" style="display:none">Удалить</button>
       <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Отмена</button>
       <button class="modal-btn modal-btn-save" onclick="savePlace()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="modal-overlay" id="eventModalOverlay">
+  <div class="modal">
+    <div class="modal-header"><h2 id="evtModalTitle">Добавить событие</h2><button class="modal-close" onclick="closeEventModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Название</label><input type="text" id="evtName" placeholder="Перелёт, заселение, трансфер…"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Дата</label><input type="date" id="evtDate"/></div>
+        <div class="form-group"><label>Время</label><input type="time" id="evtTime"/></div>
+      </div>
+      <div class="form-group"><label>Заметка</label><textarea id="evtNote" placeholder="Рейс SU123, терминал 5, багаж 23кг…"></textarea></div>
+      <div class="form-group">
+        <label>Файлы</label>
+        <div class="popup-file-area">
+          <button class="popup-file-btn" onclick="uploadEventFile()">📎 Прикрепить файл</button>
+          <span id="evtFiles"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-delete" id="evtDelete" onclick="deleteEvent()" style="display:none">Удалить</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeEventModal()">Отмена</button>
+      <button class="modal-btn modal-btn-save" onclick="saveEvent()">Сохранить</button>
     </div>
   </div>
 </div>
@@ -722,7 +756,7 @@ function switchMobileView(view){
 }
 
 function init(){
-  loadUD();loadCP();initDB();
+  loadUD();loadCP();loadEvents();initDB();
   map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
   L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google Maps',maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
   if(isMobile()){L.control.zoom({position:'topright'}).addTo(map);}
@@ -1091,8 +1125,15 @@ function setPrice(i,v){if(v!=='')setUD(placeKey(allPlaces()[i]),'price',parseInt
 function gmapsDayUrl(dp){
   if(!dp||dp.length<1)return'#';
   var url='https://www.google.com/maps/dir/';
-  dp.forEach(function(item){url+=item.p.lat+','+item.p.lng+'/';});
+  dp.forEach(function(item){
+    var p=item.p||item;
+    if(p.lat!==undefined)url+=p.lat+','+p.lng+'/';
+  });
   return url;
+}
+function deleteEventById(id){
+  customEvents=customEvents.filter(function(e){return e.id!==id;});
+  saveEvents();renderCalendar();
 }
 
 function toggleCalendar(){
@@ -1104,50 +1145,73 @@ function renderCalendar(){
   var body=document.getElementById('calBody');body.innerHTML='';
   var days=tripDays(),places=allPlaces();
   days.forEach(function(day){
-    var dp=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,i:i,ud:ud});});
-    // Sort by time: with time first (ascending), then without time
+    var dp=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({type:'place',p:p,i:i,ud:ud,time:ud.plannedTime||''});});
+    // Get events for this day
+    customEvents.forEach(function(evt,ei){if(evt.date===day)dp.push({type:'event',evt:evt,ei:ei,time:evt.time||''});});
+    // Sort by time
     dp.sort(function(a,b){
-      var ta=a.ud.plannedTime||'', tb=b.ud.plannedTime||'';
-      if(ta&&!tb)return -1;if(!ta&&tb)return 1;
-      return ta.localeCompare(tb);
+      if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;
+      return a.time.localeCompare(b.time);
     });
     var div=document.createElement('div');div.className='cal-day';
-    var cnt=dp.length,cntCls=cnt>5?'cal-day-count warn':'cal-day-count';
+    var cnt=dp.length,cntCls=cnt>6?'cal-day-count warn':'cal-day-count';
     var totalMin=0,totalCost=0,totalTravel=0;
     dp.forEach(function(item){
-      var ed=item.ud.dur||item.p.dur||60;
-      var ep=item.ud.price!==undefined?item.ud.price:(item.p.price||0);
-      totalMin+=ed;totalCost+=priceEstimate(ep);
-      if(item.ud.travelMin)totalTravel+=item.ud.travelMin;
+      if(item.type==='place'){
+        var ed=item.ud.dur||item.p.dur||60;
+        var ep=item.ud.price!==undefined?item.ud.price:(item.p.price||0);
+        totalMin+=ed;totalCost+=priceEstimate(ep);
+        if(item.ud.travelMin)totalTravel+=item.ud.travelMin;
+      }
     });
     totalMin+=totalTravel;
     var timeStr=totalMin>0?' · ⏱'+durLabel(totalMin)+(totalTravel?' ('+totalTravel+'м в пути)':''):'';
     var costStr=totalCost>0?' · ~£'+totalCost:'';
-    var routeBtn=cnt>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(dp)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
+    var placesOnly=dp.filter(function(x){return x.type==='place';});
+    var routeBtn=placesOnly.length>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(placesOnly)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
     div.innerHTML='<div class="cal-day-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>'+fmtDay(day)+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span><span style="display:flex;align-items:center;gap:4px"><span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+'</span></div>';
     var bd=document.createElement('div');bd.className='cal-day-body';
-    if(!cnt){bd.innerHTML='<div class="cal-empty">—</div>';}
-    else dp.forEach(function(item,idx){
-      // Travel time separator (between entries)
-      var travelModes={'walk':'🚶','transit':'🚇','bus':'🚌','taxi':'🚕','car':'🚗'};
-      var tm=item.ud.travelMin||0, tmode=item.ud.travelMode||'transit';
-      if(idx>0||tm){
-        var sep=document.createElement('div');sep.className='cal-travel';
-        sep.innerHTML='↓ '+
-          '<select onchange="setTravel('+item.i+',null,this.value)" onclick="event.stopPropagation()">'+ Object.keys(travelModes).map(function(k){return '<option value="'+k+'"'+(k===tmode?' selected':'')+'>'+travelModes[k]+'</option>';}).join('')+'</select>'+
-          ' <input type="number" value="'+(tm||'')+'" placeholder="мин" onchange="setTravel('+item.i+',this.value)" onclick="event.stopPropagation()"/> мин';
-        bd.appendChild(sep);
-      }
-      var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';
-      var timeTag=item.ud.plannedTime?'<span style="font-size:10px;color:var(--planned);font-weight:600;min-width:38px">'+item.ud.plannedTime+'</span>':'';
-      var fileIcon=item.ud.hasFiles?'<span style="font-size:12px" title="Есть билет">📎</span>':'';
-      var el=document.createElement('div');el.className='cal-place';
-      el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span>'+timeTag+
-        '<span class="cal-pname">'+item.p.name+'</span>'+fileIcon+
-        '<input type="time" value="'+(item.ud.plannedTime||'')+'" onclick="event.stopPropagation()" onchange="setTime('+item.i+',this.value)" style="font-size:10px;padding:1px 3px;border:1px solid #e8e8e5;border-radius:6px;width:70px;min-height:28px;font-family:inherit" title="Время"/>'+
-        '<span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
-      el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);
-    });
+    if(!cnt){
+      bd.innerHTML='<div class="cal-empty" style="cursor:pointer" onclick="openEventModal(\''+day+'\')">＋ добавить событие</div>';
+    }
+    else{
+      dp.forEach(function(item,idx){
+        if(item.type==='place'){
+          // Travel time separator
+          var travelModes={'walk':'🚶','transit':'🚇','bus':'🚌','taxi':'🚕','car':'🚗'};
+          var tm=item.ud.travelMin||0, tmode=item.ud.travelMode||'transit';
+          if(idx>0||tm){
+            var sep=document.createElement('div');sep.className='cal-travel';
+            sep.innerHTML='↓ <select onchange="setTravel('+item.i+',null,this.value)" onclick="event.stopPropagation()">'+ Object.keys(travelModes).map(function(k){return '<option value="'+k+'"'+(k===tmode?' selected':'')+'>'+travelModes[k]+'</option>';}).join('')+'</select> <input type="number" value="'+(tm||'')+'" placeholder="мин" onchange="setTravel('+item.i+',this.value)" onclick="event.stopPropagation()"/> мин';
+            bd.appendChild(sep);
+          }
+          var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';
+          var timeTag=item.time?'<span style="font-size:10px;color:var(--planned);font-weight:600;min-width:38px">'+item.time+'</span>':'';
+          var fileIcon=item.ud.hasFiles?'<span style="font-size:12px">📎</span>':'';
+          var el=document.createElement('div');el.className='cal-place';
+          el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span>'+timeTag+
+            '<span class="cal-pname">'+item.p.name+'</span>'+fileIcon+
+            '<input type="time" value="'+(item.time||'')+'" onclick="event.stopPropagation()" onchange="setTime('+item.i+',this.value)" style="font-size:10px;padding:1px 3px;border:1px solid #e8e8e5;border-radius:6px;width:70px;min-height:28px;font-family:inherit"/>'+
+            '<span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
+          el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);
+        } else {
+          // Custom event
+          var evt=item.evt;
+          var evtTimeTag=evt.time?'<span class="cal-evt-time">'+evt.time+'</span>':'';
+          var evtFileIcon=(evt.files&&evt.files.length)?'<span style="font-size:12px">📎'+evt.files.length+'</span>':'';
+          var el=document.createElement('div');el.className='cal-event';
+          el.innerHTML='<span class="cal-evt-icon">📌</span>'+evtTimeTag+
+            '<span class="cal-evt-name">'+evt.title+(evt.note?'<div class="cal-evt-note">'+evt.note+'</div>':'')+'</span>'+evtFileIcon+
+            '<span class="cal-remove" onclick="event.stopPropagation();deleteEventById(\''+evt.id+'\')" title="Убрать">✕</span>';
+          el.onclick=function(){openEditEvent(item.ei);};bd.appendChild(el);
+        }
+      });
+      // Add event button at end of day
+      var addEvt=document.createElement('div');addEvt.className='cal-empty';addEvt.style.cssText='cursor:pointer;font-style:normal;font-size:11px;color:var(--planned)';
+      addEvt.textContent='＋ событие';
+      addEvt.onclick=function(){openEventModal(day);};
+      bd.appendChild(addEvt);
+    }
     div.appendChild(bd);body.appendChild(div);
   });
   var un=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push({p:p,i:i});});
@@ -1190,6 +1254,16 @@ function exportICS(){
     if(p.website)lines.push('URL:'+p.website);
     lines.push('GEO:'+p.lat+';'+p.lng,'END:VEVENT');
   });
+  // Custom events
+  customEvents.forEach(function(evt){
+    if(!evt.date)return;
+    var d=evt.date.replace(/-/g,'');
+    var dtStart=evt.time?'DTSTART:'+d+'T'+evt.time.replace(':','')+'00':'DTSTART;VALUE=DATE:'+d;
+    var dtEnd=evt.time?'DTEND:'+d+'T'+evt.time.replace(':','')+'00':'DTEND;VALUE=DATE:'+d;
+    lines.push('BEGIN:VEVENT',dtStart,dtEnd,'SUMMARY:'+evt.title);
+    if(evt.note)lines.push('DESCRIPTION:'+evt.note.replace(/\n/g,'\\n'));
+    lines.push('END:VEVENT');
+  });
   lines.push('END:VCALENDAR');
   var blob=new Blob([lines.join('\r\n')],{type:'text/calendar'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='uk_trip.ics';a.click();
@@ -1218,6 +1292,86 @@ function closeModal(){document.getElementById('modalOverlay').classList.remove('
 function savePlace(){var name=document.getElementById('fName').value.trim();if(!name){alert('Укажите название');return;}var lat=parseFloat(document.getElementById('fLat').value),lng=parseFloat(document.getElementById('fLng').value);if(isNaN(lat)||isNaN(lng)){alert('Укажите координаты');return;}var place={city:document.getElementById('fCity').value,cat:document.getElementById('fCat').value,name:name,desc:document.getElementById('fDesc').value.trim(),lat:lat,lng:lng,_custom:true,dur:parseInt(document.getElementById('fDur').value)||60,price:parseInt(document.getElementById('fPrice').value)||0};var w=document.getElementById('fWebsite').value.trim(),wi=document.getElementById('fWiki').value.trim();if(w)place.website=w;if(wi)place.wiki=wi;if(editingCustomIdx>=0)customPlaces[editingCustomIdx]=place;else customPlaces.push(place);saveCP();closeModal();selected=null;render();}
 function deleteCustomPlace(){if(editingCustomIdx<0)return;if(!confirm('Удалить?'))return;customPlaces.splice(editingCustomIdx,1);saveCP();closeModal();selected=null;render();}
 document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('eventModalOverlay').addEventListener('click',function(e){if(e.target===this)closeEventModal();});
+
+/* ── CUSTOM EVENTS (not tied to places) ── */
+var customEvents=[];
+var editingEventIdx=-1;
+var evtTempFiles=[];
+function loadEvents(){try{var d=localStorage.getItem('uk_map_events');if(d)customEvents=JSON.parse(d);}catch(e){}}
+function saveEvents(){try{localStorage.setItem('uk_map_events',JSON.stringify(customEvents));}catch(e){}}
+function openEventModal(prefillDate){
+  editingEventIdx=-1;evtTempFiles=[];
+  document.getElementById('evtModalTitle').textContent='Добавить событие';
+  document.getElementById('evtDelete').style.display='none';
+  document.getElementById('evtName').value='';
+  document.getElementById('evtDate').value=prefillDate||'';
+  document.getElementById('evtTime').value='';
+  document.getElementById('evtNote').value='';
+  document.getElementById('evtFiles').innerHTML='';
+  document.getElementById('eventModalOverlay').classList.add('show');
+}
+function openEditEvent(idx){
+  editingEventIdx=idx;
+  var evt=customEvents[idx];
+  evtTempFiles=evt.files||[];
+  document.getElementById('evtModalTitle').textContent='Редактировать';
+  document.getElementById('evtDelete').style.display='inline-block';
+  document.getElementById('evtName').value=evt.title||'';
+  document.getElementById('evtDate').value=evt.date||'';
+  document.getElementById('evtTime').value=evt.time||'';
+  document.getElementById('evtNote').value=evt.note||'';
+  renderEvtFiles();
+  document.getElementById('eventModalOverlay').classList.add('show');
+}
+function closeEventModal(){document.getElementById('eventModalOverlay').classList.remove('show');}
+function saveEvent(){
+  var title=document.getElementById('evtName').value.trim();
+  if(!title){alert('Укажите название');return;}
+  var evt={
+    id:editingEventIdx>=0?customEvents[editingEventIdx].id:'evt_'+Date.now(),
+    title:title,
+    date:document.getElementById('evtDate').value,
+    time:document.getElementById('evtTime').value,
+    note:document.getElementById('evtNote').value.trim(),
+    files:evtTempFiles
+  };
+  if(editingEventIdx>=0)customEvents[editingEventIdx]=evt;
+  else customEvents.push(evt);
+  saveEvents();closeEventModal();
+  if(calOpen)renderCalendar();
+}
+function deleteEvent(){
+  if(editingEventIdx<0)return;
+  if(!confirm('Удалить событие?'))return;
+  customEvents.splice(editingEventIdx,1);
+  saveEvents();closeEventModal();
+  if(calOpen)renderCalendar();
+}
+function uploadEventFile(){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx';inp.multiple=true;
+  inp.onchange=function(){
+    Array.from(inp.files).forEach(function(file){
+      var reader=new FileReader();
+      reader.onload=function(){
+        evtTempFiles.push({name:file.name,data:reader.result});
+        renderEvtFiles();
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  inp.click();
+}
+function renderEvtFiles(){
+  var container=document.getElementById('evtFiles');container.innerHTML='';
+  evtTempFiles.forEach(function(f,idx){
+    var el=document.createElement('span');el.className='popup-file-item';
+    el.innerHTML='📄 '+f.name+' <span class="popup-file-del" onclick="event.stopPropagation();evtTempFiles.splice('+idx+',1);renderEvtFiles()">✕</span>';
+    el.onclick=function(e){e.stopPropagation();var a=document.createElement('a');a.href=f.data;a.download=f.name;a.click();};
+    container.appendChild(el);
+  });
+}
 window.addEventListener('load',init);
 
 // ── SERVICE WORKER (offline) ──
