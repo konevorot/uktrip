@@ -756,9 +756,12 @@ function switchMobileView(view){
 }
 
 function init(){
-  loadUD();loadCP();loadEvents();initDB();
+  try{ loadUD(); }catch(e){ console.warn('loadUD',e); }
+  try{ loadCP(); }catch(e){ console.warn('loadCP',e); }
+  try{ loadEvents(); }catch(e){ console.warn('loadEvents',e); }
+  try{ initDB(); }catch(e){ console.warn('initDB',e); }
   map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
-  L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google Maps',maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
   if(isMobile()){L.control.zoom({position:'topright'}).addTo(map);}
   map.on('click',onMapClick);
   buildCats();buildCatSelect();getLocation();render();
@@ -847,6 +850,9 @@ function makeIcon(color,isSel,ud){
 function mkLinks(p,stop){var s=stop?' onclick="event.stopPropagation()"':'',ls=[];if(p.website)ls.push('<a href="'+p.website+'" target="_blank"'+s+'>🌐 Сайт</a>');if(p.wiki)ls.push('<a href="'+p.wiki+'" target="_blank"'+s+'>📖 Wiki</a>');ls.push('<a href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'&travelmode=transit" target="_blank"'+s+'>🚇 Маршрут</a>');return '<div class="'+(stop?'links':'popup-links')+'">'+ls.join('')+'</div>';}
 
 function render(){
+  try{ _render(); }catch(e){ console.error('render error:',e); }
+}
+function _render(){
   Object.keys(markers).forEach(function(i){map.removeLayer(markers[i]);});markers={};
   if(searchMarker){map.removeLayer(searchMarker);searchMarker=null;}
   var list=document.getElementById('list');
