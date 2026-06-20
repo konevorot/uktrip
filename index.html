@@ -846,6 +846,7 @@ function render(){
       '<a class="popup-action-btn" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'&travelmode=transit" target="_blank" style="text-decoration:none">🚇 Маршрут</a>'+
       (p._custom?'<button class="popup-action-btn" onclick="openEditModal('+i+')">✎</button>':'')+
       '<input type="date" class="popup-date-input" value="'+(ud.plannedDate||'')+'" onchange="setDate('+i+',this.value)"/>'+
+      '<input type="time" class="popup-date-input" value="'+(ud.plannedTime||'')+'" onchange="setTime('+i+',this.value)" style="width:90px" placeholder="Время"/>'+
       '<select class="popup-select" onchange="setDur('+i+',this.value)" title="Время визита"><option value="">'+(effDur?'⏱'+durLabel(effDur):'⏱ Время')+'</option><option value="15">15м</option><option value="30">30м</option><option value="45">45м</option><option value="60">1ч</option><option value="90">1.5ч</option><option value="120">2ч</option><option value="180">3ч</option><option value="240">полдня</option><option value="480">день</option></select>'+
       '<select class="popup-select" onchange="setPrice('+i+',this.value)" title="Бюджет"><option value="">'+priceLabel(effPrice)+'</option><option value="0">бесплатно</option><option value="1">£</option><option value="2">££</option><option value="3">£££</option></select>'+
       '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
@@ -860,7 +861,7 @@ function render(){
     badges='<div class="card-badges">';
     if(ud.fav)badges+='<span class="badge badge-fav">♥</span>';
     if(ud.visited)badges+='<span class="badge badge-vis">✓</span>';
-    if(ud.plannedDate)badges+='<span class="badge badge-date">'+fmtDate(ud.plannedDate)+'</span>';
+    if(ud.plannedDate)badges+='<span class="badge badge-date">'+(ud.plannedTime?ud.plannedTime+' · ':'')+fmtDate(ud.plannedDate)+'</span>';
     badges+='<span class="badge '+priceBadgeClass(cardPrice)+'">'+priceLabel(cardPrice)+'</span>';
     badges+='<span class="badge badge-dur">⏱'+durLabel(cardDur)+'</span>';
     if(p._custom)badges+='<span class="badge badge-custom">✦</span>';
@@ -874,6 +875,14 @@ function render(){
     list.appendChild(card);
   });
   if(!searchMode) document.getElementById('countText').textContent='Показано: '+items.length;
+  // Add "search on map" link if there's a query
+  var sq=(document.getElementById('searchInput').value||'').trim();
+  if(sq.length>=2&&!searchMode){
+    var mapLink=document.createElement('div');mapLink.className='search-back';
+    mapLink.innerHTML='🌍 Искать «'+sq+'» на карте (Google, OpenStreetMap)';
+    mapLink.onclick=function(){mapSearch();};
+    list.appendChild(mapLink);
+  }
   if(calOpen)renderCalendar();
   drawRoute();
 }
@@ -889,10 +898,10 @@ function switchCity(c,btn){activeCity=c;selected=null;document.querySelectorAll(
 function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav',!u.fav);render();}
 function toggleVisited(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'visited',!u.visited);render();}
 function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');render();}
+function setTime(i,v){setUD(placeKey(allPlaces()[i]),'plannedTime',v||'');render();}
 function setNote(i,v){setUD(placeKey(allPlaces()[i]),'note',v||'');}
 function onSearchInput(){
-  if(searchMode){searchMode=false;render();}
-  else render();
+  searchMode=false;render();
 }
 
 /* ── MAP SEARCH (Nominatim) ── */
@@ -992,6 +1001,12 @@ function renderCalendar(){
   var days=tripDays(),places=allPlaces();
   days.forEach(function(day){
     var dp=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,i:i,ud:ud});});
+    // Sort by time: with time first (ascending), then without time
+    dp.sort(function(a,b){
+      var ta=a.ud.plannedTime||'', tb=b.ud.plannedTime||'';
+      if(ta&&!tb)return -1;if(!ta&&tb)return 1;
+      return ta.localeCompare(tb);
+    });
     var div=document.createElement('div');div.className='cal-day';
     var cnt=dp.length,cntCls=cnt>5?'cal-day-count warn':'cal-day-count';
     var totalMin=0,totalCost=0;
@@ -1008,8 +1023,12 @@ function renderCalendar(){
     if(!cnt){bd.innerHTML='<div class="cal-empty">—</div>';}
     else dp.forEach(function(item){
       var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';
+      var timeTag=item.ud.plannedTime?'<span style="font-size:10px;color:var(--planned);font-weight:600;min-width:38px">'+item.ud.plannedTime+'</span>':'';
       var el=document.createElement('div');el.className='cal-place';
-      el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span><span class="cal-pname">'+item.p.name+'</span><span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
+      el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span>'+timeTag+
+        '<span class="cal-pname">'+item.p.name+'</span>'+
+        '<input type="time" value="'+(item.ud.plannedTime||'')+'" onclick="event.stopPropagation()" onchange="setTime('+item.i+',this.value)" style="font-size:10px;padding:1px 3px;border:1px solid #e8e8e5;border-radius:6px;width:70px;min-height:28px;font-family:inherit" title="Время"/>'+
+        '<span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
       el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);
     });
     div.appendChild(bd);body.appendChild(div);
