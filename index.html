@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#1a1a1a"/>
-<title>🇬🇧 UK Trip · 26.06 — 10.07</title>
+<title>🇬🇧 UK Trip · 25.06 — 10.07</title>
 <meta property="og:title" content="🇬🇧 Англия и Шотландия · Карта путешествия"/>
 <meta property="og:description" content="200+ мест в Лондоне, Эдинбурге и Глазго"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -124,6 +124,17 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 .cal-place .cal-pname{flex:1;font-weight:500}
 .cal-place .cal-remove{font-size:16px;cursor:pointer;color:var(--muted);padding:4px 8px}
 .cal-empty{padding:10px 14px;font-size:12px;color:#ccc;font-style:italic}
+.cal-travel{padding:2px 14px 2px 30px;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;background:#fafaf8;border-top:1px dashed #e8e8e5}
+.cal-travel input{width:40px;padding:1px 3px;border:1px solid var(--border);border-radius:5px;font-size:10px;text-align:center;font-family:inherit}
+.cal-travel select{padding:1px 2px;border:1px solid var(--border);border-radius:5px;font-size:10px;font-family:inherit;background:#fff}
+.badge-file{background:#e8e0f0;color:#6c3483;cursor:pointer}
+.popup-file-area{margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.popup-file-btn{padding:3px 8px;border-radius:8px;border:1px dashed var(--border);background:#fafaf8;font-size:11px;cursor:pointer;font-family:inherit;color:var(--muted);transition:.15s}
+.popup-file-btn:hover{background:#f0f0ec;border-style:solid}
+.popup-file-item{padding:2px 8px;border-radius:8px;background:#e8e0f0;font-size:10px;color:#6c3483;cursor:pointer;display:flex;align-items:center;gap:3px}
+.popup-file-item:hover{opacity:.8}
+.popup-file-del{font-size:12px;opacity:.6;cursor:pointer}
+.popup-file-del:hover{opacity:1}
 .cal-route-btn{padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;min-height:32px}
 .cal-route-btn.on{background:var(--planned);color:#fff;border-color:var(--planned)}
 .cal-unassigned{background:#fff3e0}
@@ -656,7 +667,7 @@ var PLACES=[
   {city:"glasgow",cat:"bookshop",name:"Caledonia Books",desc:"Шотландская литература, поэзия, переводы. Маленький, тёплый, хозяин знает всё о шотландских авторах. Great Western Road, West End",lat:55.8784,lng:-0.2875,dur:20,price:0}
 ];
 
-var TRIP_START='2026-06-26',TRIP_END='2026-07-10';
+var TRIP_START='2026-06-25',TRIP_END='2026-07-10';
 function tripDays(){var days=[],d=new Date(TRIP_START);while(d<=new Date(TRIP_END)){days.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}return days;}
 var DOW=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return DOW[d.getDay()]+', '+d.getDate()+'.'+(d.getMonth()+1);}
@@ -711,7 +722,7 @@ function switchMobileView(view){
 }
 
 function init(){
-  loadUD();loadCP();
+  loadUD();loadCP();initDB();
   map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
   L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google Maps',maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
   if(isMobile()){L.control.zoom({position:'topright'}).addTo(map);}
@@ -850,8 +861,16 @@ function render(){
       '<select class="popup-select" onchange="setDur('+i+',this.value)" title="Время визита"><option value="">'+(effDur?'⏱'+durLabel(effDur):'⏱ Время')+'</option><option value="15">15м</option><option value="30">30м</option><option value="45">45м</option><option value="60">1ч</option><option value="90">1.5ч</option><option value="120">2ч</option><option value="180">3ч</option><option value="240">полдня</option><option value="480">день</option></select>'+
       '<select class="popup-select" onchange="setPrice('+i+',this.value)" title="Бюджет"><option value="">'+priceLabel(effPrice)+'</option><option value="0">бесплатно</option><option value="1">£</option><option value="2">££</option><option value="3">£££</option></select>'+
       '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
+      '<div class="popup-file-area"><button class="popup-file-btn" onclick="uploadFileFor('+i+')">📎 Прикрепить билет</button><span id="files-'+i+'"></span></div>'+
       '</div></div>',{maxWidth:300});
-    (function(idx,mk){mk.on('click',function(){selectPlace(idx);});})(i,m);
+    (function(idx,mk){
+      mk.on('click',function(){selectPlace(idx);});
+      mk.on('popupopen',function(){
+        var key=placeKey(allPlaces()[idx]);
+        var container=document.getElementById('files-'+idx);
+        if(container)renderFilesList(key,container);
+      });
+    })(i,m);
     markers[i]=m;
 
     if(searchMode) return; // don't add cards in search mode
@@ -866,6 +885,7 @@ function render(){
     badges+='<span class="badge badge-dur">⏱'+durLabel(cardDur)+'</span>';
     if(p._custom)badges+='<span class="badge badge-custom">✦</span>';
     if(ud.note)badges+='<span class="badge badge-note">📝</span>';
+    if(ud.hasFiles)badges+='<span class="badge badge-file">📎 билет</span>';
     badges+='</div>';
     var card=document.createElement('div');
     card.className='place-card'+(isSel?' active':'');card.id='card-'+i;
@@ -899,6 +919,90 @@ function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav
 function toggleVisited(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'visited',!u.visited);render();}
 function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');render();}
 function setTime(i,v){setUD(placeKey(allPlaces()[i]),'plannedTime',v||'');render();}
+function setTravel(i,mins,mode){
+  var k=placeKey(allPlaces()[i]);
+  if(mins)setUD(k,'travelMin',parseInt(mins));
+  if(mode!==undefined)setUD(k,'travelMode',mode);
+  render();
+}
+
+/* ── FILE ATTACHMENTS (IndexedDB) ── */
+var fileDB=null;
+function initDB(){
+  return new Promise(function(resolve){
+    var req=indexedDB.open('uk_trip_files',1);
+    req.onupgradeneeded=function(e){e.target.result.createObjectStore('files');};
+    req.onsuccess=function(e){fileDB=e.target.result;resolve();};
+    req.onerror=function(){resolve();};
+  });
+}
+function saveFile(plKey,fileName,data){
+  if(!fileDB)return;
+  var tx=fileDB.transaction('files','readwrite');
+  var store=tx.objectStore('files');
+  // Get existing files for this place
+  var getReq=store.get(plKey);
+  getReq.onsuccess=function(){
+    var files=getReq.result||[];
+    files.push({name:fileName,data:data,ts:Date.now()});
+    store.put(files,plKey);
+  };
+}
+function getFiles(plKey,cb){
+  if(!fileDB){cb([]);return;}
+  var tx=fileDB.transaction('files','readonly');
+  var req=tx.objectStore('files').get(plKey);
+  req.onsuccess=function(){cb(req.result||[]);};
+  req.onerror=function(){cb([]);};
+}
+function deleteFile(plKey,idx){
+  if(!fileDB)return;
+  var tx=fileDB.transaction('files','readwrite');
+  var store=tx.objectStore('files');
+  var req=store.get(plKey);
+  req.onsuccess=function(){
+    var files=req.result||[];
+    files.splice(idx,1);
+    store.put(files,plKey);
+    render();
+  };
+}
+function downloadFile(plKey,idx){
+  getFiles(plKey,function(files){
+    if(!files[idx])return;
+    var f=files[idx];
+    var a=document.createElement('a');
+    a.href=f.data;a.download=f.name;a.click();
+  });
+}
+function uploadFileFor(plIdx){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx';inp.multiple=true;
+  inp.onchange=function(){
+    var p=allPlaces()[plIdx],key=placeKey(p);
+    Array.from(inp.files).forEach(function(file){
+      var reader=new FileReader();
+      reader.onload=function(){
+        saveFile(key,file.name,reader.result);
+        // Mark in userData that files exist
+        setUD(key,'hasFiles',true);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  inp.click();
+}
+function renderFilesList(plKey,container){
+  getFiles(plKey,function(files){
+    container.innerHTML='';
+    files.forEach(function(f,idx){
+      var el=document.createElement('span');el.className='popup-file-item';
+      el.innerHTML='📄 '+f.name+' <span class="popup-file-del" onclick="event.stopPropagation();deleteFile(\''+plKey.replace(/'/g,"\\'")+'\','+idx+')">✕</span>';
+      el.onclick=function(e){e.stopPropagation();downloadFile(plKey,idx);};
+      container.appendChild(el);
+    });
+  });
+}
 function setNote(i,v){setUD(placeKey(allPlaces()[i]),'note',v||'');}
 function onSearchInput(){
   searchMode=false;render();
@@ -1009,24 +1113,37 @@ function renderCalendar(){
     });
     var div=document.createElement('div');div.className='cal-day';
     var cnt=dp.length,cntCls=cnt>5?'cal-day-count warn':'cal-day-count';
-    var totalMin=0,totalCost=0;
+    var totalMin=0,totalCost=0,totalTravel=0;
     dp.forEach(function(item){
       var ed=item.ud.dur||item.p.dur||60;
       var ep=item.ud.price!==undefined?item.ud.price:(item.p.price||0);
       totalMin+=ed;totalCost+=priceEstimate(ep);
+      if(item.ud.travelMin)totalTravel+=item.ud.travelMin;
     });
-    var timeStr=totalMin>0?' · ⏱'+durLabel(totalMin):'';
+    totalMin+=totalTravel;
+    var timeStr=totalMin>0?' · ⏱'+durLabel(totalMin)+(totalTravel?' ('+totalTravel+'м в пути)':''):'';
     var costStr=totalCost>0?' · ~£'+totalCost:'';
     var routeBtn=cnt>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(dp)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
     div.innerHTML='<div class="cal-day-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>'+fmtDay(day)+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span><span style="display:flex;align-items:center;gap:4px"><span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+'</span></div>';
     var bd=document.createElement('div');bd.className='cal-day-body';
     if(!cnt){bd.innerHTML='<div class="cal-empty">—</div>';}
-    else dp.forEach(function(item){
+    else dp.forEach(function(item,idx){
+      // Travel time separator (between entries)
+      var travelModes={'walk':'🚶','transit':'🚇','bus':'🚌','taxi':'🚕','car':'🚗'};
+      var tm=item.ud.travelMin||0, tmode=item.ud.travelMode||'transit';
+      if(idx>0||tm){
+        var sep=document.createElement('div');sep.className='cal-travel';
+        sep.innerHTML='↓ '+
+          '<select onchange="setTravel('+item.i+',null,this.value)" onclick="event.stopPropagation()">'+ Object.keys(travelModes).map(function(k){return '<option value="'+k+'"'+(k===tmode?' selected':'')+'>'+travelModes[k]+'</option>';}).join('')+'</select>'+
+          ' <input type="number" value="'+(tm||'')+'" placeholder="мин" onchange="setTravel('+item.i+',this.value)" onclick="event.stopPropagation()"/> мин';
+        bd.appendChild(sep);
+      }
       var c=CATS[item.p.cat]?CATS[item.p.cat].color:'#999';
       var timeTag=item.ud.plannedTime?'<span style="font-size:10px;color:var(--planned);font-weight:600;min-width:38px">'+item.ud.plannedTime+'</span>':'';
+      var fileIcon=item.ud.hasFiles?'<span style="font-size:12px" title="Есть билет">📎</span>':'';
       var el=document.createElement('div');el.className='cal-place';
       el.innerHTML='<span class="cal-dot" style="background:'+c+'"></span>'+timeTag+
-        '<span class="cal-pname">'+item.p.name+'</span>'+
+        '<span class="cal-pname">'+item.p.name+'</span>'+fileIcon+
         '<input type="time" value="'+(item.ud.plannedTime||'')+'" onclick="event.stopPropagation()" onchange="setTime('+item.i+',this.value)" style="font-size:10px;padding:1px 3px;border:1px solid #e8e8e5;border-radius:6px;width:70px;min-height:28px;font-family:inherit" title="Время"/>'+
         '<span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
       el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);
@@ -1080,7 +1197,7 @@ function exportICS(){
 function exportPrint(){
   var w=window.open('','_blank');
   var h='<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>UK Trip</title><style>body{font-family:-apple-system,sans-serif;padding:20px;font-size:13px}h1{font-size:18px}h2{font-size:14px;margin:14px 0 4px;padding:4px 8px;background:#f0f0f0;border-radius:6px}.p{padding:4px 0;border-bottom:1px solid #eee}.ct{font-size:10px;padding:1px 6px;border-radius:5px;color:#fff;white-space:nowrap;display:inline-block;margin-right:4px}.n{font-weight:600}.d{color:#666}.nt{color:#8854d0;font-style:italic}</style></head><body>';
-  h+='<h1>🇬🇧 UK Trip · 26.06 — 10.07.2026</h1>';
+  h+='<h1>🇬🇧 UK Trip · 25.06 — 10.07.2026</h1>';
   var days=tripDays(),places=allPlaces();
   days.forEach(function(day){
     var dp=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,ud:ud});});
