@@ -115,7 +115,14 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 .cal-export-btns{display:flex;gap:4px}
 .cal-export-btn{padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:11px;cursor:pointer;font-family:inherit;min-height:32px}
 .cal-day{border-bottom:1px solid var(--border)}
+.cal-day.cal-past .cal-day-header{color:#bbb;background:#fafaf8}
+.cal-day.cal-past .cal-day-count{opacity:.5}
+.cal-day.cal-today .cal-day-header{background:#e8f0fd;color:var(--planned)}
+.cal-day.cal-today{border-left:3px solid var(--planned)}
 .cal-day-header{padding:10px 14px;background:#fafaf8;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;min-height:44px}
+.cal-day-header:hover{background:#f0f0ec}
+.cal-day-add{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;color:var(--muted);flex-shrink:0;line-height:1}
+.cal-day-add:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .cal-day-count{font-size:11px;font-weight:400;color:var(--muted);background:var(--border);padding:2px 8px;border-radius:8px}
 .cal-day-count.warn{background:#fde8e8;color:var(--fav)}
 .cal-day-body.collapsed{display:none}
@@ -1150,40 +1157,38 @@ function toggleCalendar(){
 function renderCalendar(){
   var body=document.getElementById('calBody');body.innerHTML='';
   var days=tripDays(),places=allPlaces();
+  var today=new Date().toISOString().slice(0,10);
   days.forEach(function(day){
     var dp=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({type:'place',p:p,i:i,ud:ud,time:ud.plannedTime||''});});
-    // Get events for this day
     customEvents.forEach(function(evt,ei){if(evt.date===day)dp.push({type:'event',evt:evt,ei:ei,time:evt.time||''});});
-    // Sort by time
-    dp.sort(function(a,b){
-      if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;
-      return a.time.localeCompare(b.time);
-    });
-    var div=document.createElement('div');div.className='cal-day';
+    dp.sort(function(a,b){if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;return a.time.localeCompare(b.time);});
+
+    var isPast=day<today, isToday=day===today;
+    var div=document.createElement('div');
+    div.className='cal-day'+(isPast?' cal-past':'')+(isToday?' cal-today':'');
+
     var cnt=dp.length,cntCls=cnt>6?'cal-day-count warn':'cal-day-count';
     var totalMin=0,totalCost=0,totalTravel=0;
-    dp.forEach(function(item){
-      if(item.type==='place'){
-        var ed=item.ud.dur||item.p.dur||60;
-        var ep=item.ud.price!==undefined?item.ud.price:(item.p.price||0);
-        totalMin+=ed;totalCost+=priceEstimate(ep);
-        if(item.ud.travelMin)totalTravel+=item.ud.travelMin;
-      }
-    });
+    dp.forEach(function(item){if(item.type==='place'){var ed=item.ud.dur||item.p.dur||60;var ep=item.ud.price!==undefined?item.ud.price:(item.p.price||0);totalMin+=ed;totalCost+=priceEstimate(ep);if(item.ud.travelMin)totalTravel+=item.ud.travelMin;}});
     totalMin+=totalTravel;
-    var timeStr=totalMin>0?' · ⏱'+durLabel(totalMin)+(totalTravel?' ('+totalTravel+'м в пути)':''):'';
+    var timeStr=totalMin>0?' · ⏱'+durLabel(totalMin):'';
     var costStr=totalCost>0?' · ~£'+totalCost:'';
     var placesOnly=dp.filter(function(x){return x.type==='place';});
     var routeBtn=placesOnly.length>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(placesOnly)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
-    div.innerHTML='<div class="cal-day-header" onclick="this.nextElementSibling.classList.toggle(\'collapsed\')"><span>'+fmtDay(day)+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span><span style="display:flex;align-items:center;gap:4px"><span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+'</span></div>';
-    var bd=document.createElement('div');bd.className='cal-day-body';
+
+    div.innerHTML='<div class="cal-day-header" onclick="this.parentElement.querySelector(\'.cal-day-body\').classList.toggle(\'collapsed\')">'+
+      '<span>'+(isToday?'📍 ':'')+fmtDay(day)+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span>'+
+      '<span style="display:flex;align-items:center;gap:4px">'+
+        '<button class="cal-day-add" onclick="event.stopPropagation();openEventModal(\''+day+'\')" title="Добавить событие">＋</button>'+
+        '<span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+
+      '</span></div>';
+
+    var bd=document.createElement('div');bd.className='cal-day-body'+(isPast&&!isToday?' collapsed':'');
     if(!cnt){
-      bd.innerHTML='<div class="cal-empty" style="cursor:pointer" onclick="openEventModal(\''+day+'\')">＋ добавить событие</div>';
-    }
-    else{
+      bd.innerHTML='<div class="cal-empty" style="cursor:pointer;font-style:normal;color:var(--planned);font-size:11px" onclick="openEventModal(\''+day+'\')">＋ добавить место или событие</div>';
+    } else {
       dp.forEach(function(item,idx){
         if(item.type==='place'){
-          // Travel time separator
           var travelModes={'walk':'🚶','transit':'🚇','bus':'🚌','taxi':'🚕','car':'🚗'};
           var tm=item.ud.travelMin||0, tmode=item.ud.travelMode||'transit';
           if(idx>0||tm){
@@ -1201,7 +1206,6 @@ function renderCalendar(){
             '<span class="cal-remove" onclick="event.stopPropagation();setDate('+item.i+',\'\')" title="Убрать">✕</span>';
           el.onclick=function(){selectPlace(item.i);};bd.appendChild(el);
         } else {
-          // Custom event
           var evt=item.evt;
           var evtTimeTag=evt.time?'<span class="cal-evt-time">'+evt.time+'</span>':'';
           var evtFileIcon=(evt.files&&evt.files.length)?'<span style="font-size:12px">📎'+evt.files.length+'</span>':'';
@@ -1212,14 +1216,10 @@ function renderCalendar(){
           el.onclick=function(){openEditEvent(item.ei);};bd.appendChild(el);
         }
       });
-      // Add event button at end of day
-      var addEvt=document.createElement('div');addEvt.className='cal-empty';addEvt.style.cssText='cursor:pointer;font-style:normal;font-size:11px;color:var(--planned)';
-      addEvt.textContent='＋ событие';
-      addEvt.onclick=function(){openEventModal(day);};
-      bd.appendChild(addEvt);
     }
     div.appendChild(bd);body.appendChild(div);
   });
+  // Unassigned favorites
   var un=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push({p:p,i:i});});
   if(un.length){
     var div=document.createElement('div');div.className='cal-day';
