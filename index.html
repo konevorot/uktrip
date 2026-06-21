@@ -119,6 +119,12 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 .cal-day.cal-past .cal-day-count{opacity:.5}
 .cal-day.cal-today .cal-day-header{background:#e8f0fd;color:var(--planned)}
 .cal-day.cal-today{border-left:3px solid var(--planned)}
+.cal-day.cal-focus .cal-day-header{background:#1a1a1a;color:#fff}
+.cal-day.cal-focus .cal-day-count{background:rgba(255,255,255,.2);color:#fff}
+.cal-day.cal-focus .cal-day-add{border-color:rgba(255,255,255,.3);color:#fff}
+.cal-day.cal-focus .cal-day-add:hover{background:#fff;color:#1a1a1a}
+.cal-focus-reset{position:sticky;bottom:0;padding:8px 14px;background:#1a1a1a;color:#fff;text-align:center;font-size:12px;cursor:pointer;z-index:2}
+.cal-focus-reset:hover{background:#333}
 .cal-day-header{padding:10px 14px;background:#fafaf8;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;min-height:44px}
 .cal-day-header:hover{background:#f0f0ec}
 .cal-day-add{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;color:var(--muted);flex-shrink:0;line-height:1}
@@ -733,7 +739,7 @@ function allPlaces(){return PLACES.concat(customPlaces);}
 
 var activeCity='both',activeCats={},markers={},selected=null,map,routeLines=[];
 var activeFilters={fav:false,visited:false,hasDate:false};
-var pickingCoords=false,editingCustomIdx=-1,calOpen=false,activeRouteDay=null;
+var pickingCoords=false,editingCustomIdx=-1,calOpen=false,activeRouteDay=null,focusDay=null;
 var mobileView='map',showHidden=false;
 var dayNotes={};
 function loadDayNotes(){try{var d=localStorage.getItem('uk_map_daynotes');if(d)dayNotes=JSON.parse(d);}catch(e){}}
@@ -860,7 +866,10 @@ function resetAllFilters(){
 }
 function buildCatSelect(){var sel=document.getElementById('fCat');Object.keys(CATS).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=CATS[k].label;sel.appendChild(o);});}
 
-function makeIcon(color,isSel,ud){
+function makeIcon(color,isSel,ud,dimmed){
+  if(dimmed){
+    return L.divIcon({className:'',html:'<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="#ccc" stroke="#fff" stroke-width="1.5" opacity="0.5"/></svg>',iconSize:[16,16],iconAnchor:[8,8]});
+  }
   var s=isSel?14:9;
   var ring=isSel?'<circle cx="16" cy="16" r="13" fill="none" stroke="'+color+'" stroke-width="2" opacity="0.35"/>':'';
   var heart=(ud&&ud.fav)?'<text x="16" y="6" text-anchor="middle" font-size="8" fill="#e74c3c">♥</text>':'';
@@ -906,7 +915,8 @@ function _render(){
   items.forEach(function(item){
     var p=item.p,i=item.i,ud=item.ud,c=CATS[p.cat]?CATS[p.cat].color:'#999',catLabel=CATS[p.cat]?CATS[p.cat].label:p.cat;
     var isSel=selected===i;
-    var m=L.marker([p.lat,p.lng],{icon:makeIcon(c,isSel,ud)}).addTo(map);
+    var dimmed=focusDay&&(!ud.plannedDate||ud.plannedDate!==focusDay);
+    var m=L.marker([p.lat,p.lng],{icon:makeIcon(c,isSel,ud,dimmed),zIndexOffset:dimmed?-1000:0}).addTo(map);
     var noteHtml=ud.note?'<div class="popup-note-show">📝 '+ud.note+'</div>':'';
     var effDur=ud.dur||p.dur||60;
     var effPrice=ud.price!==undefined?ud.price:(p.price!==undefined?p.price:1);
@@ -1270,6 +1280,22 @@ function deleteEventById(id){
   saveEvents();renderCalendar();
 }
 
+function setFocusDay(day){
+  focusDay=(focusDay===day)?null:day;
+  render();
+  if(focusDay){
+    if(isMobile())switchMobileView('map');
+    var pts=[];
+    allPlaces().forEach(function(p){
+      var ud=getUD(placeKey(p));
+      if(ud.plannedDate===focusDay)pts.push([p.lat,p.lng]);
+    });
+    if(pts.length>=2) map.fitBounds(L.latLngBounds(pts).pad(0.2),{animate:true});
+    else if(pts.length===1) map.setView(pts[0],14,{animate:true});
+  }
+  if(calOpen)renderCalendar();
+}
+
 function toggleCalendar(){
   if(isMobile()){switchMobileView('cal');return;}
   calOpen=!calOpen;document.getElementById('calPanel').classList.toggle('show',calOpen);document.getElementById('calToggle').classList.toggle('on',calOpen);if(calOpen)renderCalendar();
@@ -1284,9 +1310,10 @@ function renderCalendar(){
     customEvents.forEach(function(evt,ei){if(evt.date===day)dp.push({type:'event',evt:evt,ei:ei,time:evt.time||''});});
     dp.sort(function(a,b){if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;return a.time.localeCompare(b.time);});
 
+    var isFocus=focusDay===day;
     var isPast=day<today, isToday=day===today;
     var div=document.createElement('div');
-    div.className='cal-day'+(isPast?' cal-past':'')+(isToday?' cal-today':'');
+    div.className='cal-day'+(isPast?' cal-past':'')+(isToday?' cal-today':'')+(isFocus?' cal-focus':'');
 
     var cnt=dp.length,cntCls=cnt>6?'cal-day-count warn':'cal-day-count';
     var totalMin=0,totalCost=0,totalTravel=0;
@@ -1303,6 +1330,7 @@ function renderCalendar(){
     div.innerHTML='<div class="cal-day-header" onclick="this.parentElement.querySelector(\'.cal-day-body\').classList.toggle(\'collapsed\')">'+
       '<span>'+(isToday?'📍 ':'')+fmtDay(day)+noteIcon+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span>'+
       '<span style="display:flex;align-items:center;gap:4px">'+
+        '<button class="cal-day-add" onclick="event.stopPropagation();setFocusDay(\''+day+'\')" title="Показать на карте" style="'+(isFocus?'background:#fff;color:#1a1a1a;border-color:#fff':'')+'">👁</button>'+
         '<button class="cal-day-add" onclick="event.stopPropagation();openEventModal(\''+day+'\')" title="Добавить событие">＋</button>'+
         '<span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+
       '</span></div>';
@@ -1348,6 +1376,13 @@ function renderCalendar(){
     }
     div.appendChild(bd);body.appendChild(div);
   });
+  // Focus reset bar
+  if(focusDay){
+    var resetBar=document.createElement('div');resetBar.className='cal-focus-reset';
+    resetBar.innerHTML='👁 Показаны точки: '+fmtDay(focusDay)+' — нажмите, чтобы показать все';
+    resetBar.onclick=function(){setFocusDay(null);};
+    body.appendChild(resetBar);
+  }
   // Unassigned favorites
   var un=[];places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.fav&&!ud.plannedDate)un.push({p:p,i:i});});
   if(un.length){
