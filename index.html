@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#1a1a1a"/>
-<title>🇬🇧 UK Trip · 25.06 — 10.07</title>
+<title>🇬🇧 UK Trip · 24.06 — 10.07</title>
 <meta property="og:title" content="🇬🇧 Англия и Шотландия · Карта путешествия"/>
 <meta property="og:description" content="200+ мест в Лондоне, Эдинбурге и Глазго"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -284,7 +284,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
   <div class="cal-panel" id="calPanel">
     <div class="cal-header"><h3>📅 План по дням</h3>
       <div class="cal-export-btns">
-        <button class="cal-export-btn" onclick="openEventModal()">＋ Событие</button>
+        <button class="cal-export-btn" onclick="openEventModal()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a;font-weight:600">＋ Событие</button>
         <button class="cal-export-btn" onclick="exportICS()">📥 .ics</button>
         <button class="cal-export-btn" onclick="exportPrint()">🖨 Печать</button>
       </div>
@@ -701,7 +701,7 @@ var PLACES=[
   {city:"glasgow",cat:"bookshop",name:"Caledonia Books",desc:"Шотландская литература, поэзия, переводы. Маленький, тёплый, хозяин знает всё о шотландских авторах. Great Western Road, West End",lat:55.8784,lng:-0.2875,dur:20,price:0}
 ];
 
-var TRIP_START='2026-06-25',TRIP_END='2026-07-10';
+var TRIP_START='2026-06-24',TRIP_END='2026-07-10';
 function tripDays(){var days=[],d=new Date(TRIP_START);while(d<=new Date(TRIP_END)){days.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}return days;}
 var DOW=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return DOW[d.getDay()]+', '+d.getDate()+'.'+(d.getMonth()+1);}
@@ -761,7 +761,7 @@ function init(){
   try{ loadEvents(); }catch(e){ console.warn('loadEvents',e); }
   try{ initDB(); }catch(e){ console.warn('initDB',e); }
   map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+  L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:20,subdomains:'0123'}).addTo(map);
   if(isMobile()){L.control.zoom({position:'topright'}).addTo(map);}
   map.on('click',onMapClick);
   buildCats();buildCatSelect();getLocation();render();
@@ -1277,7 +1277,7 @@ function exportICS(){
 function exportPrint(){
   var w=window.open('','_blank');
   var h='<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>UK Trip</title><style>body{font-family:-apple-system,sans-serif;padding:20px;font-size:13px}h1{font-size:18px}h2{font-size:14px;margin:14px 0 4px;padding:4px 8px;background:#f0f0f0;border-radius:6px}.p{padding:4px 0;border-bottom:1px solid #eee}.ct{font-size:10px;padding:1px 6px;border-radius:5px;color:#fff;white-space:nowrap;display:inline-block;margin-right:4px}.n{font-weight:600}.d{color:#666}.nt{color:#8854d0;font-style:italic}</style></head><body>';
-  h+='<h1>🇬🇧 UK Trip · 25.06 — 10.07.2026</h1>';
+  h+='<h1>🇬🇧 UK Trip · 24.06 — 10.07.2026</h1>';
   var days=tripDays(),places=allPlaces();
   days.forEach(function(day){
     var dp=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,ud:ud});});
