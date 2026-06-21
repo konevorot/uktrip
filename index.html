@@ -776,6 +776,7 @@ function init(){
   try{ loadCP(); }catch(e){ console.warn('loadCP',e); }
   try{ loadEvents(); }catch(e){ console.warn('loadEvents',e); }
   try{ loadDayNotes(); }catch(e){ console.warn('loadDayNotes',e); }
+  try{ loadPhotoCache(); }catch(e){ console.warn('loadPhotoCache',e); }
   try{ initDB(); }catch(e){ console.warn('initDB',e); }
   map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
   L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:20,subdomains:'0123'}).addTo(map);
@@ -910,7 +911,7 @@ function _render(){
     var effDur=ud.dur||p.dur||60;
     var effPrice=ud.price!==undefined?ud.price:(p.price!==undefined?p.price:1);
     var infoLine='<div style="font-size:11px;color:#888;margin-bottom:5px"><span style="color:'+(effPrice===0?'#27ae60':'#2980b9')+'">'+priceLabel(effPrice)+'</span> · ⏱ '+durLabel(effDur)+'</div>';
-    m.bindPopup('<div class="popup-inner"><div class="popup-tag" style="color:'+c+'">'+catLabel+'</div><div class="popup-name">'+p.name+'</div><div class="popup-desc">'+p.desc+'</div>'+infoLine+noteHtml+mkLinks(p,false)+
+    m.bindPopup('<div class="popup-inner"><div id="photo-'+i+'" style="margin:-10px -12px 8px;overflow:hidden;border-radius:10px 10px 0 0;max-height:160px"></div><div class="popup-tag" style="color:'+c+'">'+catLabel+'</div><div class="popup-name">'+p.name+'</div><div class="popup-desc">'+p.desc+'</div>'+infoLine+noteHtml+mkLinks(p,false)+
       '<div class="popup-actions">'+
       '<button class="popup-action-btn '+(ud.fav?'on-fav':'')+'" onclick="toggleFav('+i+')">'+(ud.fav?'♥ Да':'♡ Избр.')+'</button>'+
       '<button class="popup-action-btn '+(ud.visited?'on-vis':'')+'" onclick="toggleVisited('+i+')">'+(ud.visited?'✓ Было':'○ Было')+'</button>'+
@@ -918,20 +919,21 @@ function _render(){
       (p._custom?'<button class="popup-action-btn" onclick="openEditModal('+i+')">✎</button>':'')+
       '<button class="popup-action-btn" onclick="hidePlace('+i+')" style="color:'+(ud.hidden?'#27ae60':'#e74c3c')+'">'+(ud.hidden?'↩ Вернуть':'🗑')+'</button>'+
       '<input type="date" class="popup-date-input" value="'+(ud.plannedDate||'')+'" onchange="setDate('+i+',this.value)"/>'+
-      '<input type="time" class="popup-date-input" value="'+(ud.plannedTime||'')+'" onchange="setTime('+i+',this.value)" style="width:90px" placeholder="Время"/>'+
+      '<input type="time" class="popup-date-input" value="'+(ud.plannedTime||'')+'" onchange="setTime('+i+',this.value)" style="width:90px"/>'+
       '<select class="popup-select" onchange="setDur('+i+',this.value)" title="Время визита"><option value="">'+(effDur?'⏱'+durLabel(effDur):'⏱ Время')+'</option><option value="15">15м</option><option value="30">30м</option><option value="45">45м</option><option value="60">1ч</option><option value="90">1.5ч</option><option value="120">2ч</option><option value="180">3ч</option><option value="240">полдня</option><option value="480">день</option></select>'+
       '<select class="popup-select" onchange="setPrice('+i+',this.value)" title="Бюджет"><option value="">'+priceLabel(effPrice)+'</option><option value="0">бесплатно</option><option value="1">£</option><option value="2">££</option><option value="3">£££</option></select>'+
       '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
-      '<div class="popup-file-area"><button class="popup-file-btn" onclick="uploadFileFor('+i+')">📎 Прикрепить билет</button><span id="files-'+i+'"></span></div>'+
+      '<div class="popup-file-area"><button class="popup-file-btn" onclick="uploadFileFor('+i+')">📎 Прикрепить</button><span id="files-'+i+'"></span></div>'+
       '</div></div>',{maxWidth:300});
-    (function(idx,mk){
+    (function(idx,mk,place){
       mk.on('click',function(){selectPlace(idx);});
       mk.on('popupopen',function(){
         var key=placeKey(allPlaces()[idx]);
         var container=document.getElementById('files-'+idx);
         if(container)renderFilesList(key,container);
+        loadPlacePhoto(idx,place);
       });
-    })(i,m);
+    })(i,m,p);
     markers[i]=m;
 
     if(searchMode) return; // don't add cards in search mode
@@ -1172,6 +1174,86 @@ function addFromSearchMarker(lat,lng,name){addFromSearch(name,lat,lng,'');}
 function setDur(i,v){if(v)setUD(placeKey(allPlaces()[i]),'dur',parseInt(v));render();}
 function setPrice(i,v){if(v!=='')setUD(placeKey(allPlaces()[i]),'price',parseInt(v));render();}
 
+/* ── WIKIPEDIA PHOTOS ── */
+var photoCache={};
+function loadPhotoCache(){try{var d=localStorage.getItem('uk_map_photos');if(d)photoCache=JSON.parse(d);}catch(e){}}
+function savePhotoCache(){try{localStorage.setItem('uk_map_photos',JSON.stringify(photoCache));}catch(e){}}
+function loadPlacePhoto(idx,p){
+  var el=document.getElementById('photo-'+idx);
+  if(!el)return;
+  var cacheKey=p.name;
+  // Check cache
+  if(photoCache[cacheKey]){
+    if(photoCache[cacheKey]==='none')return;
+    el.innerHTML='<img src="'+photoCache[cacheKey]+'" style="width:100%;display:block;object-fit:cover;max-height:160px"/>';
+    return;
+  }
+  if(!p.wiki)return;
+  // Extract article title from wiki URL
+  var m=p.wiki.match(/wikipedia\.org\/wiki\/(.+)/);
+  if(!m)return;
+  var title=decodeURIComponent(m[1]);
+  fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(title))
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.thumbnail&&data.thumbnail.source){
+        var url=data.thumbnail.source.replace(/\/\d+px-/,'/400px-');
+        photoCache[cacheKey]=url;savePhotoCache();
+        el.innerHTML='<img src="'+url+'" style="width:100%;display:block;object-fit:cover;max-height:160px"/>';
+      } else {
+        photoCache[cacheKey]='none';savePhotoCache();
+      }
+    }).catch(function(){});
+}
+
+/* ── ROUTE OPTIMIZATION (nearest neighbor TSP) ── */
+function optimizeRoute(day){
+  var places=allPlaces(),dp=[];
+  places.forEach(function(p,i){
+    var ud=getUD(placeKey(p));
+    if(ud.plannedDate===day)dp.push({p:p,i:i,ud:ud});
+  });
+  if(dp.length<2)return;
+  // Nearest neighbor from first point
+  var ordered=[],remaining=dp.slice();
+  // Start with the earliest timed item, or first item
+  remaining.sort(function(a,b){return(a.ud.plannedTime||'zz').localeCompare(b.ud.plannedTime||'zz');});
+  ordered.push(remaining.shift());
+  while(remaining.length){
+    var last=ordered[ordered.length-1];
+    var nearest=0,nearDist=Infinity;
+    for(var j=0;j<remaining.length;j++){
+      var d=dist(last.p.lat,last.p.lng,remaining[j].p.lat,remaining[j].p.lng);
+      if(d<nearDist){nearDist=d;nearest=j;}
+    }
+    ordered.push(remaining.splice(nearest,1)[0]);
+  }
+  // Reassign times if the first had a time
+  var startTime=ordered[0].ud.plannedTime;
+  if(startTime){
+    var mins=parseInt(startTime.split(':')[0])*60+parseInt(startTime.split(':')[1]);
+    ordered.forEach(function(item,idx){
+      if(idx===0)return;
+      var prevDur=ordered[idx-1].ud.dur||ordered[idx-1].p.dur||60;
+      mins+=prevDur+15; // 15 min travel buffer
+      var h=Math.floor(mins/60),m=mins%60;
+      setUD(placeKey(item.p),'plannedTime',(h<10?'0':'')+h+':'+(m<10?'0':'')+m);
+    });
+  }
+  // Clear and reassign order via plannedTime
+  if(!startTime){
+    // No times set - just assign sequential times starting 09:00
+    ordered.forEach(function(item,idx){
+      var prevDur=idx>0?(ordered[idx-1].ud.dur||ordered[idx-1].p.dur||60):0;
+      var base=540+idx*90; // 9:00 + 1.5h intervals as default
+      var h=Math.floor(base/60),m=base%60;
+      setUD(placeKey(item.p),'plannedTime',(h<10?'0':'')+h+':'+(m<10?'0':'')+m);
+    });
+  }
+  render();
+  if(calOpen)renderCalendar();
+}
+
 /* ── CALENDAR ── */
 /* ── GOOGLE MAPS HELPERS ── */
 function gmapsDayUrl(dp){
@@ -1213,7 +1295,7 @@ function renderCalendar(){
     var timeStr=totalMin>0?' · ⏱'+durLabel(totalMin):'';
     var costStr=totalCost>0?' · ~£'+totalCost:'';
     var placesOnly=dp.filter(function(x){return x.type==='place';});
-    var routeBtn=placesOnly.length>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(placesOnly)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
+    var routeBtn=placesOnly.length>1?'<button class="cal-route-btn" onclick="event.stopPropagation();optimizeRoute(\''+day+'\')" title="Оптимальный маршрут">🔄</button><button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(placesOnly)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
 
     var dayNote=dayNotes[day]||'';
     var noteIcon=dayNote?' 📝':'';
