@@ -131,6 +131,10 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 .cal-place .cal-pname{flex:1;font-weight:500}
 .cal-place .cal-remove{font-size:16px;cursor:pointer;color:var(--muted);padding:4px 8px}
 .cal-empty{padding:10px 14px;font-size:12px;color:#ccc;font-style:italic}
+.cal-day-note{padding:6px 14px;border-top:1px solid #f0f0ec}
+.cal-day-note textarea{width:100%;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;font-size:11px;font-family:inherit;resize:none;height:32px;background:transparent;color:#555;transition:.15s}
+.cal-day-note textarea:focus{border-style:solid;border-color:#bbb;background:#fff;height:56px;outline:none}
+.cal-day-note textarea::placeholder{color:#ccc}
 .cal-travel{padding:2px 14px 2px 30px;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;background:#fafaf8;border-top:1px dashed #e8e8e5}
 .cal-travel input{width:40px;padding:1px 3px;border:1px solid var(--border);border-radius:5px;font-size:10px;text-align:center;font-family:inherit}
 .cal-travel select{padding:1px 2px;border:1px solid var(--border);border-radius:5px;font-size:10px;font-family:inherit;background:#fff}
@@ -278,6 +282,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
       <button class="filter-btn" id="filterFav" onclick="toggleFilter('fav')">♥ Избранное</button>
       <button class="filter-btn" id="filterVis" onclick="toggleFilter('visited')">✓ Посещено</button>
       <button class="filter-btn" id="filterDate" onclick="toggleFilter('hasDate')">📅 С датой</button>
+      <button class="filter-btn" id="filterHidden" onclick="showHidden=!showHidden;document.getElementById('filterHidden').classList.toggle('on',showHidden);render()">🗑 Скрытые</button>
       <button class="filter-reset" id="filterReset" onclick="resetAllFilters()" style="display:none">✕ Сбросить всё</button>
       <div class="date-filter">
         <label>с</label><input type="date" id="dateFrom" onchange="render()"/>
@@ -700,12 +705,12 @@ var PLACES=[
   {city:"london",cat:"bookshop",name:"Persephone Books",desc:"Переиздают забытую женскую прозу XX века в серых обложках с уникальными эндпейперами. Bloomsbury. Крошечный, атмосферный. Идеальный подарок",lat:51.521,lng:-0.1185,website:"https://www.persephonebooks.co.uk",dur:20,price:0},
   {city:"london",cat:"bookshop",name:"John Sandoe Books",desc:"Три этажа в крошечном здании Chelsea: 25 000 книг отобраны вручную. Продавцы знают каждую книгу. С 1957 года. Самый личный книжный Лондона",lat:51.4924,lng:-0.1637,website:"https://www.johnsandoe.com",dur:20,price:0},
   {city:"london",cat:"bookshop",name:"Gay\'s the Word",desc:"Единственный ЛГБТ-книжный в UK с 1979. Bloomsbury. Fiction, non-fiction, zines. Историческое место для ЛГБТ-сообщества",lat:51.5257,lng:-0.1222,wiki:"https://en.wikipedia.org/wiki/Gay%27s_the_Word_(bookshop)",website:"https://www.gaystheword.co.uk",dur:20,price:0},
-  {city:"edinburgh",cat:"bookshop",name:"Topping & Company",desc:"Огромный книжный на 3 этажах: бесплатный чай и кофе для покупателей (!). Victoria Street. Можно провести час, листая. Рекомендации персонала отличные",lat:55.9475,lng:-0.194,website:"https://www.toppingbooks.co.uk",dur:45,price:0},
-  {city:"edinburgh",cat:"bookshop",name:"Armchair Books",desc:"Лабиринт подержанных книг в подвале Grassmarket: стопки до потолка, узкие проходы, запах старой бумаги. От £2. Для тех, кто любит копаться. West Port",lat:55.9469,lng:-0.1978,dur:30,price:0},
-  {city:"edinburgh",cat:"bookshop",name:"Golden Hare Books",desc:"Кураторский книжный в Stockbridge: литературная проза, детские книги с иллюстрациями, шотландские авторы. Один из лучших независимых в UK",lat:55.958,lng:-0.2089,website:"https://www.goldenharebooks.com",dur:20,price:0},
-  {city:"edinburgh",cat:"bookshop",name:"McNaughtan\'s Bookshop",desc:"Антикварный книжный с 1957: первые издания, гравюры, карты. Haddington Place. Литературные вечера. Для серьёзных библиофилов",lat:55.9566,lng:-0.176,website:"https://www.mcnaughtans.co.uk",dur:30,price:0},
-  {city:"glasgow",cat:"bookshop",name:"Voltaire & Rousseau",desc:"Богемный подержанный книжный: два этажа книг до потолка, кресла для чтения. Otago Lane — скрытый переулок. Атмосфера старого Глазго",lat:55.8746,lng:-0.2901,dur:30,price:0},
-  {city:"glasgow",cat:"bookshop",name:"Caledonia Books",desc:"Шотландская литература, поэзия, переводы. Маленький, тёплый, хозяин знает всё о шотландских авторах. Great Western Road, West End",lat:55.8784,lng:-0.2875,dur:20,price:0}
+  {city:"edinburgh",cat:"bookshop",name:"Topping & Company",desc:"Огромный книжный на 3 этажах: бесплатный чай и кофе для покупателей (!). Victoria Street. Можно провести час, листая. Рекомендации персонала отличные",lat:55.9475,lng:-3.194,website:"https://www.toppingbooks.co.uk",dur:45,price:0},
+  {city:"edinburgh",cat:"bookshop",name:"Armchair Books",desc:"Лабиринт подержанных книг в подвале Grassmarket: стопки до потолка, узкие проходы, запах старой бумаги. От £2. Для тех, кто любит копаться. West Port",lat:55.9469,lng:-3.1978,dur:30,price:0},
+  {city:"edinburgh",cat:"bookshop",name:"Golden Hare Books",desc:"Кураторский книжный в Stockbridge: литературная проза, детские книги с иллюстрациями, шотландские авторы. Один из лучших независимых в UK",lat:55.958,lng:-3.2089,website:"https://www.goldenharebooks.com",dur:20,price:0},
+  {city:"edinburgh",cat:"bookshop",name:"McNaughtan\'s Bookshop",desc:"Антикварный книжный с 1957: первые издания, гравюры, карты. Haddington Place. Литературные вечера. Для серьёзных библиофилов",lat:55.9566,lng:-3.176,website:"https://www.mcnaughtans.co.uk",dur:30,price:0},
+  {city:"glasgow",cat:"bookshop",name:"Voltaire & Rousseau",desc:"Богемный подержанный книжный: два этажа книг до потолка, кресла для чтения. Otago Lane — скрытый переулок. Атмосфера старого Глазго",lat:55.8746,lng:-4.2901,dur:30,price:0},
+  {city:"glasgow",cat:"bookshop",name:"Caledonia Books",desc:"Шотландская литература, поэзия, переводы. Маленький, тёплый, хозяин знает всё о шотландских авторах. Great Western Road, West End",lat:55.8784,lng:-4.2875,dur:20,price:0}
 ];
 
 var TRIP_START='2026-06-24',TRIP_END='2026-07-10';
@@ -729,7 +734,11 @@ function allPlaces(){return PLACES.concat(customPlaces);}
 var activeCity='both',activeCats={},markers={},selected=null,map,routeLines=[];
 var activeFilters={fav:false,visited:false,hasDate:false};
 var pickingCoords=false,editingCustomIdx=-1,calOpen=false,activeRouteDay=null;
-var mobileView='map';
+var mobileView='map',showHidden=false;
+var dayNotes={};
+function loadDayNotes(){try{var d=localStorage.getItem('uk_map_daynotes');if(d)dayNotes=JSON.parse(d);}catch(e){}}
+function saveDayNotes(){try{localStorage.setItem('uk_map_daynotes',JSON.stringify(dayNotes));}catch(e){}}
+function setDayNote(day,val){dayNotes[day]=val||'';saveDayNotes();}
 var userLat=null,userLng=null;
 Object.keys(CATS).forEach(function(k){activeCats[k]=true;});
 
@@ -766,6 +775,7 @@ function init(){
   try{ loadUD(); }catch(e){ console.warn('loadUD',e); }
   try{ loadCP(); }catch(e){ console.warn('loadCP',e); }
   try{ loadEvents(); }catch(e){ console.warn('loadEvents',e); }
+  try{ loadDayNotes(); }catch(e){ console.warn('loadDayNotes',e); }
   try{ initDB(); }catch(e){ console.warn('initDB',e); }
   map=L.map('map',{center:[54.5,-2.5],zoom:6,zoomControl:!isMobile()});
   L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:20,subdomains:'0123'}).addTo(map);
@@ -830,16 +840,18 @@ function updateResetBtn(){
   var anyFilterOn=activeFilters.fav||activeFilters.visited||activeFilters.hasDate;
   var dateFrom=document.getElementById('dateFrom').value;
   var dateTo=document.getElementById('dateTo').value;
-  var active=!allCatsOn||anyFilterOn||dateFrom||dateTo;
+  var active=!allCatsOn||anyFilterOn||dateFrom||dateTo||showHidden;
   var btn=document.getElementById('filterReset');
   if(btn)btn.style.display=active?'inline-block':'none';
 }
 function resetAllFilters(){
   Object.keys(CATS).forEach(function(k){activeCats[k]=true;});
   activeFilters={fav:false,visited:false,hasDate:false};
+  showHidden=false;
   document.getElementById('filterFav').classList.remove('on');
   document.getElementById('filterVis').classList.remove('on');
   document.getElementById('filterDate').classList.remove('on');
+  document.getElementById('filterHidden').classList.remove('on');
   document.getElementById('dateFrom').value='';
   document.getElementById('dateTo').value='';
   document.getElementById('searchInput').value='';
@@ -874,6 +886,7 @@ function _render(){
     if(!activeCats[p.cat])return;
     if(activeCity!=='both'&&p.city!==activeCity)return;
     var key=placeKey(p),ud=getUD(key);
+    if(ud.hidden&&!showHidden)return;
     if(activeFilters.fav&&!ud.fav)return;
     if(activeFilters.visited&&!ud.visited)return;
     if(activeFilters.hasDate&&!ud.plannedDate)return;
@@ -903,6 +916,7 @@ function _render(){
       '<button class="popup-action-btn '+(ud.visited?'on-vis':'')+'" onclick="toggleVisited('+i+')">'+(ud.visited?'✓ Было':'○ Было')+'</button>'+
       '<a class="popup-action-btn" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'&travelmode=transit" target="_blank" style="text-decoration:none">🚇 Маршрут</a>'+
       (p._custom?'<button class="popup-action-btn" onclick="openEditModal('+i+')">✎</button>':'')+
+      '<button class="popup-action-btn" onclick="hidePlace('+i+')" style="color:'+(ud.hidden?'#27ae60':'#e74c3c')+'">'+(ud.hidden?'↩ Вернуть':'🗑')+'</button>'+
       '<input type="date" class="popup-date-input" value="'+(ud.plannedDate||'')+'" onchange="setDate('+i+',this.value)"/>'+
       '<input type="time" class="popup-date-input" value="'+(ud.plannedTime||'')+'" onchange="setTime('+i+',this.value)" style="width:90px" placeholder="Время"/>'+
       '<select class="popup-select" onchange="setDur('+i+',this.value)" title="Время визита"><option value="">'+(effDur?'⏱'+durLabel(effDur):'⏱ Время')+'</option><option value="15">15м</option><option value="30">30м</option><option value="45">45м</option><option value="60">1ч</option><option value="90">1.5ч</option><option value="120">2ч</option><option value="180">3ч</option><option value="240">полдня</option><option value="480">день</option></select>'+
@@ -941,7 +955,11 @@ function _render(){
     (function(idx){card.onclick=function(){selectPlace(idx);};})(i);
     list.appendChild(card);
   });
-  if(!searchMode) document.getElementById('countText').textContent='Показано: '+items.length;
+  if(!searchMode){
+    var hiddenCount=0;
+    allPlaces().forEach(function(p){if(getUD(placeKey(p)).hidden)hiddenCount++;});
+    document.getElementById('countText').textContent='Показано: '+items.length+(hiddenCount?' (скрыто: '+hiddenCount+')':'');
+  }
   // Add "search on map" link if there's a query
   var sq=(document.getElementById('searchInput').value||'').trim();
   if(sq.length>=2&&!searchMode){
@@ -964,6 +982,27 @@ function selectPlace(idx){
 function switchCity(c,btn){activeCity=c;selected=null;document.querySelectorAll('.city-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');var views={both:{c:[54.5,-2.5],z:6},london:{c:[51.505,-0.11],z:11},edinburgh:{c:[55.953,-3.188],z:12},glasgow:{c:[55.864,-4.252],z:13}};var v=views[c];map.setView(v.c,v.z,{animate:true});render();}
 function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav',!u.fav);render();}
 function toggleVisited(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'visited',!u.visited);render();}
+function hidePlace(i){
+  var p=allPlaces()[i],k=placeKey(p),ud=getUD(k);
+  if(ud.hidden){
+    // Restore
+    setUD(k,'hidden',false);
+    selected=null;render();return;
+  }
+  if(p._custom){
+    if(!confirm('Удалить «'+p.name+'»?'))return;
+    var ci=customPlaces.indexOf(p);
+    if(ci>=0){customPlaces.splice(ci,1);saveCP();}
+  } else {
+    if(!confirm('Скрыть «'+p.name+'» из гайда?\n(Можно вернуть через фильтр «🗑 Скрытые»)'))return;
+    setUD(k,'hidden',true);
+  }
+  selected=null;render();
+}
+function unhideAll(){
+  Object.keys(userData).forEach(function(k){if(userData[k].hidden)delete userData[k].hidden;});
+  saveUD();render();
+}
 function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');render();}
 function setTime(i,v){setUD(placeKey(allPlaces()[i]),'plannedTime',v||'');render();}
 function setTravel(i,mins,mode){
@@ -1176,14 +1215,22 @@ function renderCalendar(){
     var placesOnly=dp.filter(function(x){return x.type==='place';});
     var routeBtn=placesOnly.length>1?'<button class="cal-route-btn'+(activeRouteDay===day?' on':'')+'" onclick="event.stopPropagation();showDayRoute(\''+day+'\')">🗺</button><a class="cal-route-btn" href="'+gmapsDayUrl(placesOnly)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none">🚇</a>':'';
 
+    var dayNote=dayNotes[day]||'';
+    var noteIcon=dayNote?' 📝':'';
+
     div.innerHTML='<div class="cal-day-header" onclick="this.parentElement.querySelector(\'.cal-day-body\').classList.toggle(\'collapsed\')">'+
-      '<span>'+(isToday?'📍 ':'')+fmtDay(day)+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span>'+
+      '<span>'+(isToday?'📍 ':'')+fmtDay(day)+noteIcon+(cnt?'<span style="font-weight:400;color:#888;font-size:10px">'+timeStr+costStr+'</span>':'')+'</span>'+
       '<span style="display:flex;align-items:center;gap:4px">'+
         '<button class="cal-day-add" onclick="event.stopPropagation();openEventModal(\''+day+'\')" title="Добавить событие">＋</button>'+
         '<span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+
       '</span></div>';
 
     var bd=document.createElement('div');bd.className='cal-day-body'+(isPast&&!isToday?' collapsed':'');
+
+    // Day note
+    var noteDiv=document.createElement('div');noteDiv.className='cal-day-note';
+    noteDiv.innerHTML='<textarea placeholder="Заметка на день…" onchange="setDayNote(\''+day+'\',this.value)" onclick="event.stopPropagation()">'+dayNote+'</textarea>';
+    bd.appendChild(noteDiv);
     if(!cnt){
       bd.innerHTML='<div class="cal-empty" style="cursor:pointer;font-style:normal;color:var(--planned);font-size:11px" onclick="openEventModal(\''+day+'\')">＋ добавить место или событие</div>';
     } else {
@@ -1283,6 +1330,7 @@ function exportPrint(){
     var dp=[];places.forEach(function(p){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,ud:ud});});
     if(!dp.length)return;
     h+='<h2>'+fmtDay(day)+' ('+dp.length+')</h2>';
+    if(dayNotes[day])h+='<div style="font-style:italic;color:#8854d0;margin-bottom:6px;padding:4px 8px;background:#f8f4ff;border-radius:6px">📝 '+dayNotes[day]+'</div>';
     dp.forEach(function(it){var c=CATS[it.p.cat]?CATS[it.p.cat].color:'#999';h+='<div class="p"><span class="ct" style="background:'+c+'">'+(CATS[it.p.cat]?CATS[it.p.cat].label:'')+'</span><span class="n">'+it.p.name+'</span> — <span class="d">'+it.p.desc+'</span>'+(it.ud.note?' <span class="nt">📝 '+it.ud.note+'</span>':'')+'</div>';});
   });
   h+='</body></html>';w.document.write(h);w.document.close();setTimeout(function(){w.print();},400);
