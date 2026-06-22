@@ -881,6 +881,15 @@ function mkLinks(p,stop){var s=stop?' onclick="event.stopPropagation()"':'',ls=[
 function render(){
   try{ _render(); }catch(e){ console.error('render error:',e); }
 }
+function renderKeepPopup(idx){
+  render();
+  // Re-open popup on the same marker after re-render
+  if(idx!==undefined&&markers[idx]){
+    setTimeout(function(){
+      markers[idx].openPopup();
+    },50);
+  }
+}
 function _render(){
   Object.keys(markers).forEach(function(i){map.removeLayer(markers[i]);});markers={};
   if(searchMarker){map.removeLayer(searchMarker);searchMarker=null;}
@@ -921,7 +930,7 @@ function _render(){
     var effDur=ud.dur||p.dur||60;
     var effPrice=ud.price!==undefined?ud.price:(p.price!==undefined?p.price:1);
     var infoLine='<div style="font-size:11px;color:#888;margin-bottom:5px"><span style="color:'+(effPrice===0?'#27ae60':'#2980b9')+'">'+priceLabel(effPrice)+'</span> · ⏱ '+durLabel(effDur)+'</div>';
-    m.bindPopup('<div class="popup-inner"><div id="photo-'+i+'" style="margin:-10px -12px 8px;overflow:hidden;border-radius:10px 10px 0 0;max-height:160px"></div><div class="popup-tag" style="color:'+c+'">'+catLabel+'</div><div class="popup-name">'+p.name+'</div><div class="popup-desc">'+p.desc+'</div>'+infoLine+noteHtml+mkLinks(p,false)+
+    m.bindPopup('<div class="popup-inner"><div id="photo-'+i+'" style="margin:-12px -14px 8px;overflow:hidden;border-radius:10px 10px 0 0;max-height:150px;background:#f5f5f5"></div><div class="popup-tag" style="color:'+c+'">'+catLabel+'</div><div class="popup-name">'+p.name+'</div><div class="popup-desc">'+p.desc+'</div>'+infoLine+noteHtml+mkLinks(p,false)+
       '<div class="popup-actions">'+
       '<button class="popup-action-btn '+(ud.fav?'on-fav':'')+'" onclick="toggleFav('+i+')">'+(ud.fav?'♥ Да':'♡ Избр.')+'</button>'+
       '<button class="popup-action-btn '+(ud.visited?'on-vis':'')+'" onclick="toggleVisited('+i+')">'+(ud.visited?'✓ Было':'○ Было')+'</button>'+
@@ -934,7 +943,7 @@ function _render(){
       '<select class="popup-select" onchange="setPrice('+i+',this.value)" title="Бюджет"><option value="">'+priceLabel(effPrice)+'</option><option value="0">бесплатно</option><option value="1">£</option><option value="2">££</option><option value="3">£££</option></select>'+
       '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
       '<div class="popup-file-area"><button class="popup-file-btn" onclick="uploadFileFor('+i+')">📎 Прикрепить</button><span id="files-'+i+'"></span></div>'+
-      '</div></div>',{maxWidth:300});
+      '</div></div>',{maxWidth:320,autoPan:true,autoPanPadding:[50,80]});
     (function(idx,mk,place){
       mk.on('click',function(){selectPlace(idx);});
       mk.on('popupopen',function(){
@@ -992,8 +1001,8 @@ function selectPlace(idx){
   if(selected!==null){map.setView([p.lat,p.lng],14,{animate:true});if(markers[idx])markers[idx].openPopup();var card=document.getElementById('card-'+idx);if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 function switchCity(c,btn){activeCity=c;selected=null;document.querySelectorAll('.city-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');var views={both:{c:[54.5,-2.5],z:6},london:{c:[51.505,-0.11],z:11},edinburgh:{c:[55.953,-3.188],z:12},glasgow:{c:[55.864,-4.252],z:13}};var v=views[c];map.setView(v.c,v.z,{animate:true});render();}
-function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav',!u.fav);render();}
-function toggleVisited(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'visited',!u.visited);render();}
+function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav',!u.fav);renderKeepPopup(i);}
+function toggleVisited(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'visited',!u.visited);renderKeepPopup(i);}
 function hidePlace(i){
   var p=allPlaces()[i],k=placeKey(p),ud=getUD(k);
   if(ud.hidden){
@@ -1015,8 +1024,8 @@ function unhideAll(){
   Object.keys(userData).forEach(function(k){if(userData[k].hidden)delete userData[k].hidden;});
   saveUD();render();
 }
-function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');render();}
-function setTime(i,v){setUD(placeKey(allPlaces()[i]),'plannedTime',v||'');render();}
+function setDate(i,v){setUD(placeKey(allPlaces()[i]),'plannedDate',v||'');renderKeepPopup(i);}
+function setTime(i,v){setUD(placeKey(allPlaces()[i]),'plannedTime',v||'');renderKeepPopup(i);}
 function setTravel(i,mins,mode){
   var k=placeKey(allPlaces()[i]);
   if(mins)setUD(k,'travelMin',parseInt(mins));
@@ -1181,8 +1190,8 @@ function addFromSearch(name,lat,lng,addr){
   document.getElementById('clickHint').style.color='#27ae60';
 }
 function addFromSearchMarker(lat,lng,name){addFromSearch(name,lat,lng,'');}
-function setDur(i,v){if(v)setUD(placeKey(allPlaces()[i]),'dur',parseInt(v));render();}
-function setPrice(i,v){if(v!=='')setUD(placeKey(allPlaces()[i]),'price',parseInt(v));render();}
+function setDur(i,v){if(v)setUD(placeKey(allPlaces()[i]),'dur',parseInt(v));renderKeepPopup(i);}
+function setPrice(i,v){if(v!=='')setUD(placeKey(allPlaces()[i]),'price',parseInt(v));renderKeepPopup(i);}
 
 /* ── WIKIPEDIA PHOTOS ── */
 var photoCache={};
@@ -1192,28 +1201,31 @@ function loadPlacePhoto(idx,p){
   var el=document.getElementById('photo-'+idx);
   if(!el)return;
   var cacheKey=p.name;
-  // Check cache
   if(photoCache[cacheKey]){
-    if(photoCache[cacheKey]==='none')return;
-    el.innerHTML='<img src="'+photoCache[cacheKey]+'" style="width:100%;display:block;object-fit:cover;max-height:160px"/>';
+    if(photoCache[cacheKey]==='none'){el.style.display='none';return;}
+    el.innerHTML='<img src="'+photoCache[cacheKey]+'" style="width:100%;display:block;object-fit:cover;max-height:150px" onerror="this.parentElement.style.display=\'none\'"/>';
     return;
   }
-  if(!p.wiki)return;
-  // Extract article title from wiki URL
+  if(!p.wiki){el.style.display='none';return;}
   var m=p.wiki.match(/wikipedia\.org\/wiki\/(.+)/);
-  if(!m)return;
-  var title=decodeURIComponent(m[1]);
-  fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(title))
-    .then(function(r){return r.json();})
+  if(!m){el.style.display='none';return;}
+  var title=decodeURIComponent(m[1]).replace(/#.*/,'');
+  el.innerHTML='<div style="padding:20px;text-align:center;color:#ccc;font-size:11px">Загрузка фото…</div>';
+  fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(title),{headers:{'Accept':'application/json'}})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
     .then(function(data){
-      if(data.thumbnail&&data.thumbnail.source){
-        var url=data.thumbnail.source.replace(/\/\d+px-/,'/400px-');
+      if(data.originalimage&&data.originalimage.source){
+        var url=data.thumbnail.source.replace(/\/\d+px-/,'/500px-');
         photoCache[cacheKey]=url;savePhotoCache();
-        el.innerHTML='<img src="'+url+'" style="width:100%;display:block;object-fit:cover;max-height:160px"/>';
+        el.innerHTML='<img src="'+url+'" style="width:100%;display:block;object-fit:cover;max-height:150px" onerror="this.parentElement.style.display=\'none\'"/>';
+      } else if(data.thumbnail&&data.thumbnail.source){
+        var url=data.thumbnail.source;
+        photoCache[cacheKey]=url;savePhotoCache();
+        el.innerHTML='<img src="'+url+'" style="width:100%;display:block;object-fit:cover;max-height:150px" onerror="this.parentElement.style.display=\'none\'"/>';
       } else {
-        photoCache[cacheKey]='none';savePhotoCache();
+        photoCache[cacheKey]='none';savePhotoCache();el.style.display='none';
       }
-    }).catch(function(){});
+    }).catch(function(e){console.warn('Photo load failed:',title,e);el.style.display='none';});
 }
 
 /* ── ROUTE OPTIMIZATION (nearest neighbor TSP) ── */
