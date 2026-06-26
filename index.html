@@ -305,7 +305,13 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
         <button class="cal-export-btn" onclick="openEventModal()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a;font-weight:600">＋ Событие</button>
         <button class="cal-export-btn" onclick="exportICS()">📥 .ics</button>
         <button class="cal-export-btn" onclick="exportPrint()">🖨 Печать</button>
+        <button class="cal-export-btn" onclick="shareGuide()" style="background:var(--planned);color:#fff;border-color:var(--planned)">📤 Поделиться</button>
       </div>
+    </div>
+    <div style="padding:0 14px 8px;border-bottom:1px solid var(--border);display:flex;gap:4px;background:#fafaf8">
+      <button class="cal-export-btn" onclick="exportAllData()" style="font-size:10px">💾 Сохранить данные</button>
+      <button class="cal-export-btn" onclick="document.getElementById('importFile').click()" style="font-size:10px">📂 Загрузить данные</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAllData(this)"/>
     </div>
     <div id="calBody"></div>
   </div>
@@ -1344,6 +1350,7 @@ function renderCalendar(){
       '<span style="display:flex;align-items:center;gap:4px">'+
         '<button class="cal-day-add" onclick="event.stopPropagation();setFocusDay(\''+day+'\')" title="Показать на карте" style="'+(isFocus?'background:#fff;color:#1a1a1a;border-color:#fff':'')+'">👁</button>'+
         '<button class="cal-day-add" onclick="event.stopPropagation();openEventModal(\''+day+'\')" title="Добавить событие">＋</button>'+
+        '<button class="cal-day-add" onclick="event.stopPropagation();shareDayPDF(\''+day+'\')" title="Поделиться днём" style="font-size:12px">📤</button>'+
         '<span class="'+cntCls+'">'+cnt+'</span>'+routeBtn+
       '</span></div>';
 
@@ -1555,7 +1562,152 @@ function renderEvtFiles(){
     container.appendChild(el);
   });
 }
-window.addEventListener('load',init);
+window.addEventListener('load',function(){
+  // Check for shared data in URL
+  try{
+    var hash=window.location.hash;
+    if(hash&&hash.indexOf('#data=')===0){
+      var encoded=hash.slice(6);
+      var json=decodeURIComponent(atob(encoded));
+      var shared=JSON.parse(json);
+      if(shared.userData)userData=shared.userData;
+      if(shared.customPlaces){customPlaces=shared.customPlaces;customPlaces.forEach(function(p){p._custom=true;});}
+      if(shared.customEvents)customEvents=shared.customEvents;
+      if(shared.dayNotes)dayNotes=shared.dayNotes;
+      saveUD();saveCP();saveEvents();saveDayNotes();
+      window.history.replaceState(null,'',window.location.pathname+window.location.search);
+      alert('Данные напарника загружены!');
+    }
+  }catch(e){console.warn('Failed to load shared data:',e);}
+  init();
+});
+
+/* ── SHARE GUIDE VIA LINK ── */
+function shareGuide(){
+  var data={userData:userData,customPlaces:customPlaces.map(function(p){var c={};for(var k in p)if(k!=='_custom')c[k]=p[k];return c;}),customEvents:customEvents,dayNotes:dayNotes};
+  var json=JSON.stringify(data);
+  try{
+    var encoded=btoa(encodeURIComponent(json));
+    var url=window.location.origin+window.location.pathname+'#data='+encoded;
+    if(url.length>50000){
+      alert('Данных слишком много для ссылки ('+Math.round(url.length/1024)+'KB). Используйте «💾 Сохранить данные» и отправьте файл напарнику.');
+      exportAllData();return;
+    }
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(function(){
+        alert('Ссылка скопирована! ('+Math.round(url.length/1024)+'KB)\n\nОтправьте её напарнику — он увидит все ваши пометки, даты, избранное и события.');
+      });
+    } else {
+      prompt('Скопируйте ссылку и отправьте напарнику:',url);
+    }
+  }catch(e){
+    alert('Ошибка создания ссылки. Используйте «💾 Сохранить данные».');
+    exportAllData();
+  }
+}
+
+/* ── EXPORT / IMPORT ALL DATA ── */
+function exportAllData(){
+  var data={userData:userData,customPlaces:customPlaces.map(function(p){var c={};for(var k in p)if(k!=='_custom')c[k]=p[k];return c;}),customEvents:customEvents,dayNotes:dayNotes,exportDate:new Date().toISOString()};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='uk_trip_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function importAllData(input){
+  if(!input.files||!input.files[0])return;
+  var reader=new FileReader();
+  reader.onload=function(){
+    try{
+      var data=JSON.parse(reader.result);
+      var msg='Загрузить данные?\n\n';
+      if(data.userData)msg+='Пометки мест: '+Object.keys(data.userData).length+'\n';
+      if(data.customPlaces)msg+='Свои места: '+data.customPlaces.length+'\n';
+      if(data.customEvents)msg+='События: '+data.customEvents.length+'\n';
+      if(data.dayNotes)msg+='Заметки на дни: '+Object.keys(data.dayNotes).filter(function(k){return data.dayNotes[k];}).length+'\n';
+      if(data.exportDate)msg+='\nСохранено: '+new Date(data.exportDate).toLocaleString('ru');
+      msg+='\n\nВаши текущие данные будут заменены!';
+      if(!confirm(msg))return;
+      if(data.userData){userData=data.userData;saveUD();}
+      if(data.customPlaces){customPlaces=data.customPlaces;customPlaces.forEach(function(p){p._custom=true;});saveCP();}
+      if(data.customEvents){customEvents=data.customEvents;saveEvents();}
+      if(data.dayNotes){dayNotes=data.dayNotes;saveDayNotes();}
+      render();if(calOpen)renderCalendar();
+      alert('Данные загружены!');
+    }catch(e){alert('Ошибка чтения файла: '+e.message);}
+  };
+  reader.readAsText(input.files[0]);
+  input.value='';
+}
+
+/* ── SHARE SINGLE DAY AS PDF ── */
+function shareDayPDF(day){
+  var places=allPlaces(),dp=[];
+  places.forEach(function(p,i){var ud=getUD(placeKey(p));if(ud.plannedDate===day)dp.push({p:p,ud:ud});});
+  var evts=customEvents.filter(function(e){return e.date===day;});
+  dp.sort(function(a,b){return(a.ud.plannedTime||'zz').localeCompare(b.ud.plannedTime||'zz');});
+  evts.sort(function(a,b){return(a.time||'zz').localeCompare(b.time||'zz');});
+
+  // Build Google Maps static link with all day points
+  var gmapsUrl='https://www.google.com/maps/dir/';
+  dp.forEach(function(item){gmapsUrl+=item.p.lat+','+item.p.lng+'/';});
+
+  var w=window.open('','_blank');
+  var h='<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+fmtDay(day)+' — UK Trip</title>';
+  h+='<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;padding:24px;max-width:700px;margin:0 auto;color:#1a1a1a;font-size:13px;line-height:1.5}';
+  h+='h1{font-size:22px;margin-bottom:4px}h1 span{font-size:14px;color:#888;font-weight:400}';
+  h+='.note{background:#f8f4ff;padding:10px 14px;border-radius:10px;color:#8854d0;margin:10px 0;font-style:italic}';
+  h+='.item{padding:14px 0;border-bottom:1px solid #eee}.item:last-child{border:none}';
+  h+='.time{color:#3498db;font-weight:600;font-size:14px;margin-right:8px}';
+  h+='.name{font-weight:600;font-size:15px}.cat{font-size:10px;padding:2px 8px;border-radius:6px;color:#fff;margin-left:6px}';
+  h+='.desc{color:#555;margin:6px 0}.links{margin-top:6px}.links a{color:#0066cc;text-decoration:none;margin-right:12px;font-size:12px}';
+  h+='.meta{color:#888;font-size:11px;margin-top:4px}';
+  h+='.evt{background:#fffbf0;padding:12px 14px;border-radius:10px;margin:8px 0}';
+  h+='.map-link{display:inline-block;margin:16px 0;padding:10px 20px;background:#1a1a1a;color:#fff;text-decoration:none;border-radius:10px;font-size:13px}';
+  h+='.footer{margin-top:24px;padding-top:12px;border-top:1px solid #eee;color:#aaa;font-size:11px}';
+  h+='@media print{body{padding:12px}.map-link{display:none}}</style></head><body>';
+
+  h+='<h1>'+fmtDay(day)+' <span>· UK Trip 2026</span></h1>';
+
+  var dn=dayNotes[day];
+  if(dn)h+='<div class="note">📝 '+dn+'</div>';
+
+  // Events
+  evts.forEach(function(evt){
+    h+='<div class="evt">';
+    if(evt.time)h+='<span class="time">'+evt.time+'</span>';
+    h+='📌 <b>'+evt.title+'</b>';
+    if(evt.note)h+='<div class="desc">'+evt.note+'</div>';
+    h+='</div>';
+  });
+
+  // Places
+  dp.forEach(function(item){
+    var p=item.p,ud=item.ud;
+    var c=CATS[p.cat]?CATS[p.cat].color:'#999';
+    var catLabel=CATS[p.cat]?CATS[p.cat].label:p.cat;
+    h+='<div class="item">';
+    if(ud.plannedTime)h+='<span class="time">'+ud.plannedTime+'</span>';
+    h+='<span class="name">'+p.name+'</span><span class="cat" style="background:'+c+'">'+catLabel+'</span>';
+    h+='<div class="desc">'+p.desc+'</div>';
+    h+='<div class="links">';
+    if(p.website)h+='<a href="'+p.website+'" target="_blank">🌐 Сайт</a>';
+    if(p.wiki)h+='<a href="'+p.wiki+'" target="_blank">📖 Wiki</a>';
+    h+='<a href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'&travelmode=transit" target="_blank">🚇 Маршрут</a>';
+    h+='</div>';
+    var meta=[];
+    if(ud.dur||p.dur)meta.push('⏱ '+durLabel(ud.dur||p.dur));
+    var pr=ud.price!==undefined?ud.price:p.price;
+    if(pr!==undefined)meta.push(priceLabel(pr));
+    if(ud.note)meta.push('📝 '+ud.note);
+    if(meta.length)h+='<div class="meta">'+meta.join(' · ')+'</div>';
+    h+='</div>';
+  });
+
+  if(dp.length>1)h+='<a class="map-link" href="'+gmapsUrl+'" target="_blank">🗺 Открыть маршрут дня в Google Maps</a>';
+
+  h+='<div class="footer">Сгенерировано из UK Trip Guide · '+new Date().toLocaleDateString('ru')+'</div>';
+  h+='</body></html>';
+  w.document.write(h);w.document.close();
+}
 
 // ── SERVICE WORKER (offline) ──
 if('serviceWorker' in navigator){
