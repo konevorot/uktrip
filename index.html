@@ -312,6 +312,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
       <button class="cal-export-btn" onclick="exportAllData()" style="font-size:10px">💾 Сохранить данные</button>
       <button class="cal-export-btn" onclick="document.getElementById('importFile').click()" style="font-size:10px">📂 Загрузить данные</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAllData(this)"/>
+      <button class="cal-export-btn" onclick="openBudgetSheet()" oncontextmenu="event.preventDefault();if(confirm('Сбросить ссылку на таблицу?')){localStorage.removeItem('uk_map_budget_url');alert('Сброшено!');}" style="font-size:10px;background:#27ae60;color:#fff;border-color:#27ae60;margin-left:auto">💰 Бюджет и траты</button>
     </div>
     <div id="calBody"></div>
   </div>
@@ -1707,6 +1708,25 @@ function shareDayPDF(day){
   h+='<div class="footer">Сгенерировано из UK Trip Guide · '+new Date().toLocaleDateString('ru')+'</div>';
   h+='</body></html>';
   w.document.write(h);w.document.close();
+}
+
+// ── BUDGET GOOGLE SHEET ──
+function openBudgetSheet(){
+  var saved=localStorage.getItem('uk_map_budget_url');
+  if(saved){
+    window.open(saved,'_blank');
+  } else {
+    var choice=confirm('Таблица ещё не привязана.\n\nОК — откроется новая Google Таблица.\nСоздайте её, скопируйте URL и вставьте в следующее окно.');
+    if(!choice)return;
+    window.open('https://sheets.new','_blank');
+    setTimeout(function(){
+      var url=prompt('Вставьте ссылку на созданную Google Таблицу:');
+      if(url&&url.indexOf('docs.google.com')!==-1){
+        localStorage.setItem('uk_map_budget_url',url);
+        alert('Сохранено! Кнопка «💰 Бюджет и траты» теперь открывает эту таблицу.\n\nЧтобы сменить ссылку — зажмите кнопку.');
+      }
+    },2000);
+  }
 }
 
 // ── SERVICE WORKER (offline) ──
