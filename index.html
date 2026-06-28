@@ -246,7 +246,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 </head>
 <body>
 <header>
-  <h1>🇬🇧 UK Trip <span style="font-size:9px;color:#ccc;font-weight:400">v18</span></h1>
+  <h1>🇬🇧 UK Trip <span style="font-size:9px;color:#ccc;font-weight:400">v20</span></h1>
   <div class="header-right">
     <div class="city-tabs">
       <button class="city-tab on" onclick="switchCity('both',this)">Все</button>
@@ -751,10 +751,20 @@ Object.keys(CATS).forEach(function(k){activeCats[k]=true;});
 function isMobile(){return window.innerWidth<=768;}
 function getLocation(){
   if(!navigator.geolocation)return;
-  navigator.geolocation.getCurrentPosition(function(pos){
+  navigator.geolocation.watchPosition(function(pos){
     userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+    // Update or create location marker
+    if(userMarker){userMarker.setLatLng([userLat,userLng]);}
+    else{
+      userMarker=L.marker([userLat,userLng],{icon:L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#3498db;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(52,152,219,.3),0 0 12px rgba(52,152,219,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:9999}).addTo(map).bindPopup('📍 Вы здесь');
+    }
     if(document.getElementById('sortSelect').value==='near')render();
-  },function(){},{ enableHighAccuracy:true, timeout:5000 });
+  },function(){},{enableHighAccuracy:true,timeout:10000,maximumAge:30000});
+}
+var userMarker=null;
+function goToMyLocation(){
+  if(userLat!==null){map.setView([userLat,userLng],15,{animate:true});if(userMarker)userMarker.openPopup();}
+  else{alert('Геолокация недоступна. Разрешите доступ к местоположению в настройках браузера.');}
 }
 function dist(lat1,lng1,lat2,lng2){
   var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
@@ -788,6 +798,10 @@ function init(){
   L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:20,subdomains:'0123'}).addTo(map);
   if(isMobile()){L.control.zoom({position:'topright'}).addTo(map);}
   map.on('click',onMapClick);
+  // Add "My location" button
+  var locBtn=L.control({position:'topright'});
+  locBtn.onAdd=function(){var d=L.DomUtil.create('div','leaflet-bar');d.innerHTML='<a href="#" onclick="event.preventDefault();goToMyLocation()" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:#fff;font-size:18px;text-decoration:none" title="Моё местоположение">📍</a>';return d;};
+  locBtn.addTo(map);
   buildCats();buildCatSelect();getLocation();render();
   window.addEventListener('resize',function(){map.invalidateSize();});
 }
@@ -1150,9 +1164,25 @@ function parseGoogleMapsLink(url){
     setTimeout(function(){
       addFromSearch(name||'Место с Google Maps',lat,lng,'Добавлено из Google Maps');
     },500);
-  } else if(url.indexOf('goo.gl')!==-1){
-    // Short link — try to resolve
-    alert('Короткие ссылки Google Maps не поддерживаются.\n\nОткройте ссылку в браузере, скопируйте полный URL из адресной строки и вставьте его сюда.');
+  } else if(url.indexOf('goo.gl')!==-1||url.indexOf('maps.app')!==-1){
+    // Short link — resolve via proxy
+    document.getElementById('searchInput').value='Разворачиваю ссылку…';
+    fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url))
+      .then(function(r){return r.text();})
+      .then(function(html){
+        // Extract redirect URL from the page
+        var m=html.match(/href="(https:\/\/www\.google\.com\/maps[^"]+)"/)||html.match(/content="0;url=(https:\/\/www\.google\.com\/maps[^"]+)"/)||html.match(/(https:\/\/www\.google\.com\/maps\/place\/[^\s"'<]+)/);
+        if(m){
+          document.getElementById('searchInput').value=m[1];
+          parseGoogleMapsLink(m[1]);
+        } else {
+          document.getElementById('searchInput').value=url;
+          alert('Не удалось развернуть короткую ссылку.\n\nОткройте её в браузере, дождитесь загрузки и скопируйте полный URL из адресной строки.');
+        }
+      }).catch(function(){
+        document.getElementById('searchInput').value=url;
+        alert('Ошибка сети при разворачивании ссылки.\n\nОткройте её в браузере и скопируйте полный URL.');
+      });
   } else {
     alert('Не удалось извлечь координаты из ссылки.\n\nСкопируйте полный URL из адресной строки Google Maps.');
   }
