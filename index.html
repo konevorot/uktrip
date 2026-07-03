@@ -246,7 +246,7 @@ aside{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;back
 </head>
 <body>
 <header>
-  <h1>🇬🇧 UK Trip <span style="font-size:9px;color:#ccc;font-weight:400">v21</span></h1>
+  <h1>🇬🇧 UK Trip <span style="font-size:9px;color:#ccc;font-weight:400">v22</span></h1>
   <div class="header-right">
     <div class="city-tabs">
       <button class="city-tab on" onclick="switchCity('both',this)">Все</button>
@@ -962,7 +962,7 @@ function _render(){
       '<select class="popup-select" onchange="setPrice('+i+',this.value)" title="Бюджет"><option value="">'+priceLabel(effPrice)+'</option><option value="0">бесплатно</option><option value="1">£</option><option value="2">££</option><option value="3">£££</option></select>'+
       '<textarea class="popup-note-input" placeholder="Заметка…" onchange="setNote('+i+',this.value)">'+(ud.note||'')+'</textarea>'+
       '<div class="popup-file-area"><button class="popup-file-btn" onclick="uploadFileFor('+i+')">📎 Прикрепить</button><span id="files-'+i+'"></span></div>'+
-      '</div></div>',{maxWidth:300,autoPan:true,autoPanPadding:[40,40],keepInView:false});
+      '</div></div>',{maxWidth:300,autoPan:false});
     (function(idx,mk,place){
       mk.on('click',function(){selectPlace(idx);});
       mk.on('popupopen',function(){
