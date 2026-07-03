@@ -964,7 +964,7 @@ function _render(){
       '<div class="popup-file-area"><button class="popup-file-btn" onclick="uploadFileFor('+i+')">📎 Прикрепить</button><span id="files-'+i+'"></span></div>'+
       '</div></div>',{maxWidth:300,autoPan:false});
     (function(idx,mk,place){
-      mk.on('click',function(){selectPlace(idx);});
+      mk.on('click',function(){selectPlace(idx,true);});
       mk.on('popupopen',function(){
         var key=placeKey(allPlaces()[idx]);
         var container=document.getElementById('files-'+idx);
@@ -1012,12 +1012,12 @@ function _render(){
   drawRoute();
 }
 
-function selectPlace(idx){
+function selectPlace(idx,keepZoom){
   selected=(selected===idx)?null:idx;
   var p=allPlaces()[idx];
   if(isMobile()&&selected!==null) switchMobileView('map');
   render();
-  if(selected!==null){map.setView([p.lat,p.lng],14,{animate:true});if(markers[idx])markers[idx].openPopup();var card=document.getElementById('card-'+idx);if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  if(selected!==null){var tz=keepZoom?map.getZoom():Math.max(map.getZoom(),14);map.setView([p.lat,p.lng],tz,{animate:true});if(markers[idx])markers[idx].openPopup();var card=document.getElementById('card-'+idx);if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 function switchCity(c,btn){activeCity=c;selected=null;document.querySelectorAll('.city-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');var views={both:{c:[54.5,-2.5],z:6},london:{c:[51.505,-0.11],z:11},edinburgh:{c:[55.953,-3.188],z:12},glasgow:{c:[55.864,-4.252],z:13}};var v=views[c];map.setView(v.c,v.z,{animate:true});render();}
 function toggleFav(i){var p=allPlaces()[i],k=placeKey(p),u=getUD(k);setUD(k,'fav',!u.fav);renderKeepPopup(i);}
